@@ -373,6 +373,17 @@ Webspace, von dem die App geladen wird – und die der Browser selbst führt.
 
 ---
 
+## Weiterlesen
+
+- **[`docs/KONZEPT.md`](docs/KONZEPT.md)** – Konzept, Entscheidungen und
+  Erkenntnisse. Insbesondere Kapitel 6: warum die App offline bleibt und ein
+  **KI-Agent im Hintergrund** die Preise holt.
+- **[`AGENTS.md`](AGENTS.md)** – kurze Orientierung für KI-Agenten und neue
+  Mitarbeitende: die drei unverhandelbaren Regeln, wo was hingehört, wie man
+  prüft.
+
+---
+
 ## Lizenz
 
 MIT. Siehe [LICENSE](LICENSE). Benutzen, weitergeben, verändern: gern.
