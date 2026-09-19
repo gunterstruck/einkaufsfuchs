@@ -202,14 +202,14 @@ der Adresse erreichbar. Das ist kein Leck – dieselben Dateien liegen ohnehin
 ### Prüfen
 
 ```bash
-npm install && npm test          # 64 Unit-Tests (Logik, Daten, Import, PWA und Designsystem)
+npm install && npm test          # 87 Unit-Tests (Logik, Daten, Import, PWA und Designsystem)
 
 npm i --no-save playwright && npx playwright install chromium
-node tools/durchlauf.mjs         # 56 Prüfungen im echten Browser + Bilder
+node tools/durchlauf.mjs         # 59 Prüfungen im echten Browser + Bilder
 node tools/update-lauf.mjs       # echter Wechsel von alter auf neue PWA-Fassung
 ```
 
-Die Prüfstrecke (56 Prüfungen) fährt die Abnahmekriterien ab, die man mit
+Die Prüfstrecke (59 Prüfungen) fährt die Abnahmekriterien ab, die man mit
 Unit-Tests nicht erreicht: die Zwei-Tipp-Regel, zehn simulierte Einkäufe, den
 verlustfreien Moduswechsel, Rezepte, das Ziehen der Kategorien mit Zeiger und
 mit Tastatur, den Briefing-Export aus der echten Zwischenablage und einen
@@ -370,6 +370,17 @@ Zwischenspeicher.
 
 Die einzigen Verbindungen, die überhaupt entstehen können, sind die des
 Webspace, von dem die App geladen wird – und die der Browser selbst führt.
+
+---
+
+## Weiterlesen
+
+- **[`docs/KONZEPT.md`](docs/KONZEPT.md)** – Konzept, Entscheidungen und
+  Erkenntnisse. Insbesondere Kapitel 6: warum die App offline bleibt und ein
+  **KI-Agent im Hintergrund** die Preise holt.
+- **[`AGENTS.md`](AGENTS.md)** – kurze Orientierung für KI-Agenten und neue
+  Mitarbeitende: die drei unverhandelbaren Regeln, wo was hingehört, wie man
+  prüft.
 
 ---
 
