@@ -12,7 +12,7 @@
 export const ANGEBOTSPROFIL_TYP = 'foxi-angebotsprofil';
 export const ANGEBOTSPROFIL_VERSION = 1;
 export const ANGEBOTSERGEBNIS_TYP = 'foxi-angebote';
-export const ANGEBOTSERGEBNIS_VERSION = 1;
+export const ANGEBOTSERGEBNIS_VERSION = 2;
 
 const OFFIZIELLE_HOSTS = ['aldi-nord.de', 'aldi-sued.de', 'rewe.de'];
 const TREFFERARTEN = new Set(['genau', 'alternative']);
@@ -152,6 +152,7 @@ export function alsAngebotsauftrag(profil = demoAngebotsprofil()) {
         '2. Keine Anmeldung, keine App-Coupons hinter Login und keine Umgehung technischer Sperren.',
         '3. Ordne nur plausible Treffer zu. Eine andere Marke ist erlaubt, muss aber als „alternative“ markiert werden.',
         '4. Übernimm Preis, Packungsgröße, Grundpreis, Gültigkeit und konkrete Quelle. Nichts erfinden.',
+        '   Schreibe den Grundpreis als positive Zahl mit eindeutigem Nenner, zum Beispiel „0,99 €/l“, „1,49 €/kg“ oder „0,25 €/Stück“.',
         '5. Falls kein passendes Angebot existiert, gib eine leere Angebotsliste zurück.',
         '6. Erzeuge nach Möglichkeit eine Datei namens „foxi-angebote-JJJJ-MM-TT.json“ mit dem Ergebnis.',
         '7. Falls du keine Datei erzeugen kannst, antworte ausschließlich mit dem gültigen JSON – ohne Markdown, Einleitung oder Nachsatz.',
@@ -189,7 +190,7 @@ function istOffizielleQuelle(wert) {
     }
 }
 
-function istAngebotGueltig(angebot) {
+function istAngebotGueltig(angebot, version) {
     if (!angebot || typeof angebot !== 'object') return false;
     if (!istText(angebot.artikelId, 100) || !istText(angebot.artikelName, 120)) return false;
     if (!istText(angebot.haendler, 80) || !istText(angebot.markt, 200)) return false;
@@ -197,6 +198,12 @@ function istAngebotGueltig(angebot) {
     if (!Number.isFinite(angebot.preis) || angebot.preis <= 0 || angebot.preis > 100000) return false;
     if (angebot.waehrung !== 'EUR') return false;
     if (!istText(angebot.menge, 80) || !istText(angebot.grundpreis, 100)) return false;
+    const grundpreis = analysiereGrundpreis(angebot.grundpreis);
+    /* Version 1 erlaubte beliebigen Grundpreistext. Solche gespeicherten
+       Ergebnisse bleiben sichtbar, nehmen aber nicht am Preisvergleich teil.
+       Eindeutig erkennbare Null-/Negativwerte waren nie sinnvolle Daten. */
+    if (grundpreis.art === 'ungueltig') return false;
+    if (version >= 2 && grundpreis.art !== 'gueltig') return false;
     if (!istDatum(angebot.gueltigVon) || !istDatum(angebot.gueltigBis)) return false;
     if (angebot.gueltigVon > angebot.gueltigBis) return false;
     if (!TREFFERARTEN.has(angebot.treffer)) return false;
@@ -219,7 +226,9 @@ export function pruefeAngebotsergebnis(daten) {
     if (!Array.isArray(daten.angebote) || daten.angebote.length > 200) {
         return { gueltig: false, grund: 'kaputt' };
     }
-    if (!daten.angebote.every(istAngebotGueltig)) return { gueltig: false, grund: 'kaputt' };
+    if (!daten.angebote.every((angebot) => istAngebotGueltig(angebot, version))) {
+        return { gueltig: false, grund: 'kaputt' };
+    }
     return { gueltig: true, grund: null };
 }
 
@@ -246,7 +255,8 @@ function gruppenschluessel(angebot) {
         angebot.grundpreis,
         angebot.gueltigVon,
         angebot.gueltigBis,
-        angebot.treffer
+        angebot.treffer,
+        typeof angebot.hinweis === 'string' ? angebot.hinweis.trim() : ''
     ].join('\u001f');
 }
 
@@ -275,13 +285,104 @@ export function gruppiereAngebote(angebote) {
     return ergebnis;
 }
 
+function zahlWert(zahl) {
+    const vorzeichen = zahl.startsWith('-') ? -1 : 1;
+    const ohneVorzeichen = /^[+-]/.test(zahl) ? zahl.slice(1) : zahl;
+    /* Der Auftrag zeigt deutsche Preisnotation. Ein Punkt mit vollständigen
+       Dreiergruppen ist deshalb ein Tausendertrennzeichen; der Dezimalpunkt
+       bleibt für bisher akzeptierte Ergebnisse ohne Tausendergruppe erlaubt. */
+    const deutsch = /^(?:[1-9]\d{0,2}(?:\.\d{3})+|0|[1-9]\d*)(?:,\d+)?$/;
+    const mitDezimalpunkt = /^(?:0|[1-9]\d*)\.\d+$/;
+    let normalisiert;
+    if (deutsch.test(ohneVorzeichen)) {
+        normalisiert = ohneVorzeichen.replaceAll('.', '').replace(',', '.');
+    } else if (mitDezimalpunkt.test(ohneVorzeichen)) {
+        normalisiert = ohneVorzeichen;
+    } else {
+        return null;
+    }
+    const wert = vorzeichen * Number(normalisiert);
+    return Number.isFinite(wert) ? wert : null;
+}
+
+const GRUNDPREIS_EINHEITEN = new Map([
+    ['kg', ['kg', 1]],
+    ['kilogramm', ['kg', 1]],
+    ['kilogram', ['kg', 1]],
+    ['kilograms', ['kg', 1]],
+    ['g', ['kg', 0.001]],
+    ['gramm', ['kg', 0.001]],
+    ['gram', ['kg', 0.001]],
+    ['grams', ['kg', 0.001]],
+    ['l', ['l', 1]],
+    ['liter', ['l', 1]],
+    ['litre', ['l', 1]],
+    ['litres', ['l', 1]],
+    ['ml', ['l', 0.001]],
+    ['milliliter', ['l', 0.001]],
+    ['millilitre', ['l', 0.001]],
+    ['stück', ['stück', 1]],
+    ['stueck', ['stück', 1]],
+    ['stk', ['stück', 1]],
+    ['stck', ['stück', 1]],
+    ['st', ['stück', 1]],
+    ['piece', ['stück', 1]],
+    ['pieces', ['stück', 1]],
+    ['wl', ['waschladung', 1]],
+    ['waschladung', ['waschladung', 1]],
+    ['waschladungen', ['waschladung', 1]],
+    ['m', ['m', 1]],
+    ['meter', ['m', 1]],
+    ['cm', ['m', 0.01]],
+    ['zentimeter', ['m', 0.01]],
+    ['m2', ['m²', 1]],
+    ['qm', ['m²', 1]],
+    ['quadratmeter', ['m²', 1]],
+    ['cm2', ['m²', 0.0001]],
+    ['blatt', ['blatt', 1]],
+    ['blätter', ['blatt', 1]],
+    ['blaetter', ['blatt', 1]],
+    ['rolle', ['rolle', 1]],
+    ['rollen', ['rolle', 1]],
+    ['paar', ['paar', 1]]
+]);
+
+function analysiereNenner(nennerText) {
+    const normalisiert = nennerText.trim().normalize('NFKC').toLocaleLowerCase('de');
+    const treffer = normalisiert.match(/^([+-]?\d[\d.,]*)?\s*([\p{L}]+(?:[23])?\.?)$/u);
+    if (!treffer) return { art: 'unklar' };
+
+    const menge = treffer[1] === undefined ? 1 : zahlWert(treffer[1]);
+    if (menge === null) return { art: 'unklar' };
+    if (menge <= 0) return { art: 'ungueltig' };
+
+    const rohEinheit = treffer[2].replace(/\.$/, '');
+    const [einheit, anteil] = GRUNDPREIS_EINHEITEN.get(rohEinheit) || [rohEinheit, 1];
+    return { art: 'gueltig', einheit, menge: menge * anteil };
+}
+
+function analysiereGrundpreis(grundpreis) {
+    if (typeof grundpreis !== 'string') return { art: 'unklar' };
+    const bereinigt = grundpreis.trim().replace(/^[−–—]/u, '-');
+    const treffer = bereinigt.match(/^([+-]?\d[\d.,]*)\s*€\s*\/\s*(.+)$/u);
+    if (!treffer) return { art: 'unklar' };
+
+    const preis = zahlWert(treffer[1]);
+    if (preis === null) return { art: 'unklar' };
+    if (preis <= 0) return { art: 'ungueltig' };
+
+    const nenner = analysiereNenner(treffer[2]);
+    if (nenner.art !== 'gueltig') return nenner;
+    const wert = preis / nenner.menge;
+    if (!Number.isFinite(wert) || wert <= 0) return { art: 'ungueltig' };
+    return { art: 'gueltig', wert: Number(wert.toPrecision(12)), einheit: nenner.einheit };
+}
+
 function grundpreisWert(grundpreis) {
-    if (typeof grundpreis !== 'string') return null;
-    const treffer = grundpreis.match(/(\d+(?:[.,]\d+)?)\s*€\s*\/\s*(.+)$/i);
-    if (!treffer) return null;
-    const wert = Number(treffer[1].replace(',', '.'));
-    if (!Number.isFinite(wert)) return null;
-    return { wert, einheit: treffer[2].trim().toLocaleLowerCase('de') };
+    const analyse = analysiereGrundpreis(grundpreis);
+    return analyse.art === 'gueltig'
+        ? { wert: analyse.wert, einheit: analyse.einheit }
+        : null;
 }
 
 function markiereNiedrigsteGrundpreise(gruppen) {

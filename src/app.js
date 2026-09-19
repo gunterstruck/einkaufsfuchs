@@ -18,6 +18,8 @@ import { initPwaUpdate } from './pwa-update.js';
    nachholen muss. Das ist der Unterschied zwischen „flüssig" und „hakt beim
    Abhaken", sobald der Katalog 480 Kacheln hat. */
 const veraltet = { liste: true, katalog: true, mehr: true };
+let letzterTag = null;
+let tageswechselZeitgeber = null;
 
 function zeichneWennSichtbar() {
     const bereich = aktiverBereich();
@@ -30,6 +32,51 @@ function zeichneWennSichtbar() {
 
 function alsVeraltetMarkieren(...bereiche) {
     for (const bereich of bereiche) veraltet[bereich] = true;
+}
+
+/** Angebote sind kalendertagsabhängig. Der Schlüssel folgt bewusst der
+ * lokalen Zeit des Geräts – genau dieselbe Sicht auf „heute“ verwendet die
+ * Angebotslogik. */
+function lokalerTag(zeitpunkt = new Date()) {
+    const jahr = zeitpunkt.getFullYear();
+    const monat = String(zeitpunkt.getMonth() + 1).padStart(2, '0');
+    const tag = String(zeitpunkt.getDate()).padStart(2, '0');
+    return `${jahr}-${monat}-${tag}`;
+}
+
+function aktualisiereNachTageswechsel() {
+    const heute = lokalerTag();
+    if (heute === letzterTag) return;
+    letzterTag = heute;
+    alsVeraltetMarkieren('liste', 'mehr');
+    zeichneWennSichtbar();
+}
+
+function planeTageswechsel() {
+    if (tageswechselZeitgeber !== null) window.clearTimeout(tageswechselZeitgeber);
+    const jetzt = new Date();
+    const morgen = new Date(jetzt);
+    morgen.setHours(24, 0, 0, 0);
+    const wartezeit = Math.max(1000, morgen.getTime() - jetzt.getTime() + 100);
+    tageswechselZeitgeber = window.setTimeout(() => {
+        aktualisiereNachTageswechsel();
+        planeTageswechsel();
+    }, wartezeit);
+}
+
+function tageswechselVerdrahten() {
+    letzterTag = lokalerTag();
+    const beiRueckkehr = () => {
+        aktualisiereNachTageswechsel();
+        /* Nach Schlafmodus oder Zeitzonenwechsel kann der alte Zeitgeber auf
+           die falsche Mitternacht zeigen. Bei Rückkehr wird er neu berechnet. */
+        planeTageswechsel();
+    };
+    window.addEventListener('focus', beiRueckkehr);
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') beiRueckkehr();
+    });
+    planeTageswechsel();
 }
 
 async function los() {
@@ -45,7 +92,10 @@ async function los() {
             /* Ein Artikel kam auf die Liste oder ging herunter. Für den
                Katalog heißt das nur: eine Kachel wechselt die Farbe. */
             alsVeraltetMarkieren('liste');
-            if (aktiverBereich() === 'katalog') synchronisiereKacheln();
+            /* Auch der verdeckte Katalog bleibt im DOM. Deshalb dort sofort
+               nachziehen; sonst trägt er nach „Liste leeren“ beim nächsten
+               Öffnen noch die alten grünen Markierungen. */
+            synchronisiereKacheln();
         } else {
             /* Abhaken, Modus, eigene Artikel, neue Reihenfolge: Hier kann
                sich auch die Sortierung ändern. Alles neu. */
@@ -58,6 +108,7 @@ async function los() {
     alsVeraltetMarkieren('liste', 'katalog', 'mehr');
     zeigeBereich('liste');
     zeichneWennSichtbar();
+    tageswechselVerdrahten();
 }
 
 los().catch((fehler) => {

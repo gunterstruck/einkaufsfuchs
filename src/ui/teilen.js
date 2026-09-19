@@ -15,7 +15,8 @@
 import { t } from '../texte.js';
 import {
     alsAustauschdatei, alsKlartext, alsStammartikelText, kaufStatistik,
-    gruppiereListe, pruefeAustauschdatei, vergleicheImport, datumFuerDateiname
+    gruppiereListe, pruefeAustauschdatei, vergleicheImport, datumFuerDateiname,
+    AUSTAUSCHDATEI_GRENZEN
 } from '../logik.js';
 import { zustand, offeneEintraege, importAnwenden, alleArtikel, ort } from '../zustand.js';
 import { melde } from './schale.js';
@@ -168,6 +169,13 @@ export function dateiEinlesen() {
         const datei = feld.files?.[0];
         feld.remove();
         if (!datei) return;
+        /* Vor `text()` und `JSON.parse()` begrenzen: Die inhaltliche Prüfung
+           kommt erst danach und kann einen unnötig großen Speicherverbrauch
+           beim Einlesen nicht mehr verhindern. */
+        if (datei.size > AUSTAUSCHDATEI_GRENZEN.bytes) {
+            melde(t('teilen.kaputteDatei'));
+            return;
+        }
         try {
             zeigeZusammenfuehrung(JSON.parse(await datei.text()));
         } catch {

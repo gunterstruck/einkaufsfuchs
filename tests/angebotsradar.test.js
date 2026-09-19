@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+    ANGEBOTSERGEBNIS_VERSION,
     aktiveAngebote,
     angeboteFuerArtikel,
     angebotStatus,
@@ -11,10 +12,10 @@ import {
     pruefeAngebotsergebnis
 } from '../src/angebotsradar.js';
 
-function ergebnis(angebote = []) {
+function ergebnis(angebote = [], version = ANGEBOTSERGEBNIS_VERSION) {
     return {
         typ: 'foxi-angebote',
-        version: 1,
+        version,
         profilId: 'demo-45136-essen',
         demo: true,
         erzeugt: '2026-08-31T07:00:00.000Z',
@@ -83,6 +84,7 @@ describe('Agentenauftrag', () => {
         expect(auftrag).toContain('aldi-nord.de');
         expect(auftrag).toContain('rewe.de');
         expect(auftrag).toContain('demo-45136-essen');
+        expect(auftrag).toContain('"version": 2');
     });
 });
 
@@ -137,6 +139,31 @@ describe('Angebotsergebnis', () => {
         expect(gruppen[0].quellen).toEqual(['https://www.aldi-nord.de/angebote.html']);
     });
 
+    it('hält Filialangebote mit unterschiedlichen Kaufbedingungen getrennt', () => {
+        const gruppen = gruppiereAngebote([
+            angebot(),
+            angebot({
+                markt: 'Steeler Straße 187, 45138 Essen',
+                hinweis: 'Nur ab 6 Packungen'
+            })
+        ]);
+
+        expect(gruppen).toHaveLength(2);
+        expect(gruppen.map((gruppe) => ({
+            hinweis: gruppe.hinweis,
+            maerkte: gruppe.maerkte
+        }))).toEqual([
+            {
+                hinweis: '',
+                maerkte: ['Schürmannstraße 43b, 45136 Essen']
+            },
+            {
+                hinweis: 'Nur ab 6 Packungen',
+                maerkte: ['Steeler Straße 187, 45138 Essen']
+            }
+        ]);
+    });
+
     it('markiert nur bei vergleichbarer Einheit den niedrigsten gefundenen Grundpreis', () => {
         const gruppen = gruppiereAngebote([
             angebot(),
@@ -160,6 +187,108 @@ describe('Angebotsergebnis', () => {
         expect(gruppen.find((gruppe) => gruppe.grundpreis === '1,19 €/l')
             .niedrigsterGefundenerGrundpreis).toBe(false);
         expect(gruppen.find((gruppe) => gruppe.grundpreis === '4,98 €/kg')
+            .niedrigsterGefundenerGrundpreis).toBe(false);
+    });
+
+    it('vergleicht deutsche Tausender- und Dezimaltrennzeichen korrekt', () => {
+        const gruppen = gruppiereAngebote([
+            angebot({
+                produkt: 'Großpackung A',
+                preis: 1099,
+                menge: '1 kg',
+                grundpreis: '1.099,00 €/kg'
+            }),
+            angebot({
+                produkt: 'Großpackung B',
+                preis: 899,
+                menge: '1 kg',
+                grundpreis: '899,00 €/kg'
+            })
+        ]);
+
+        expect(gruppen.find((gruppe) => gruppe.grundpreis === '1.099,00 €/kg')
+            .niedrigsterGefundenerGrundpreis).toBe(false);
+        expect(gruppen.find((gruppe) => gruppe.grundpreis === '899,00 €/kg')
+            .niedrigsterGefundenerGrundpreis).toBe(true);
+    });
+
+    it('zeigt alte v1-Grundpreistexte weiter an, wertet sie aber nicht als Bestpreis', () => {
+        const daten = ergebnis([
+            angebot({ produkt: 'Legacy-Milch', preis: 0.89, grundpreis: '0,89 Euro je Liter' }),
+            angebot({ produkt: 'Milch A', grundpreis: '0,99 €/l' }),
+            angebot({ produkt: 'Milch B', preis: 1.19, grundpreis: '1,19 €/1 l' })
+        ], 1);
+
+        expect(pruefeAngebotsergebnis(daten)).toEqual({ gueltig: true, grund: null });
+        const gruppen = angeboteFuerArtikel(daten, 'milch', new Date('2026-09-01T12:00:00Z'));
+        expect(gruppen).toHaveLength(3);
+        expect(gruppen.find((gruppe) => gruppe.produkt === 'Legacy-Milch')
+            .niedrigsterGefundenerGrundpreis).toBe(false);
+        expect(gruppen.find((gruppe) => gruppe.produkt === 'Milch A')
+            .niedrigsterGefundenerGrundpreis).toBe(true);
+    });
+
+    it('verlangt in v2 einen eindeutigen Grundpreis', () => {
+        expect(pruefeAngebotsergebnis(ergebnis([
+            angebot({ grundpreis: '1,2,3 €/l' })
+        ])).gueltig).toBe(false);
+        expect(pruefeAngebotsergebnis(ergebnis([
+            angebot({ grundpreis: '1,00 €/' })
+        ])).gueltig).toBe(false);
+        expect(pruefeAngebotsergebnis(ergebnis([
+            angebot({ grundpreis: '0,89 Euro je Liter' })
+        ])).gueltig).toBe(false);
+    });
+
+    it('weist erkennbare Null- und Negativwerte in v1 und v2 ab', () => {
+        for (const version of [1, 2]) {
+            for (const grundpreis of ['0,00 €/l', '-1,00 €/kg', '−1,00 €/kg', '1,00 €/0 l']) {
+                expect(pruefeAngebotsergebnis(ergebnis([
+                    angebot({ grundpreis })
+                ], version)).gueltig, `${grundpreis} in v${version}`).toBe(false);
+            }
+        }
+    });
+
+    it('zeichnet einen ungültigen Null-Grundpreis auch ohne Importprüfung nicht aus', () => {
+        const gruppen = gruppiereAngebote([
+            angebot({ grundpreis: '0,00 €/l' }),
+            angebot({
+                produkt: 'REWE Bio Vollmilch',
+                preis: 1.19,
+                grundpreis: '1,19 €/l'
+            })
+        ]);
+
+        expect(gruppen.every((gruppe) => !gruppe.niedrigsterGefundenerGrundpreis)).toBe(true);
+    });
+
+    it('rechnet g und ml auf kg und l um und vereinheitlicht Stück-Aliase', () => {
+        const masse = gruppiereAngebote([
+            angebot({ produkt: 'Packung A', grundpreis: '0,95 €/100 g' }),
+            angebot({ produkt: 'Packung B', preis: 9.9, grundpreis: '9,90 €/1 kg' })
+        ]);
+        expect(masse.find((gruppe) => gruppe.produkt === 'Packung A')
+            .niedrigsterGefundenerGrundpreis).toBe(true);
+        expect(masse.find((gruppe) => gruppe.produkt === 'Packung B')
+            .niedrigsterGefundenerGrundpreis).toBe(false);
+
+        const volumen = gruppiereAngebote([
+            angebot({ produkt: 'Flasche A', grundpreis: '0,12 €/100 ml' }),
+            angebot({ produkt: 'Flasche B', preis: 1.1, grundpreis: '1,10 €/Liter' }),
+            angebot({ produkt: 'Flasche C', preis: 1.3, grundpreis: '1,30 €/1 l' })
+        ]);
+        expect(volumen.find((gruppe) => gruppe.produkt === 'Flasche B')
+            .niedrigsterGefundenerGrundpreis).toBe(true);
+        expect(volumen.filter((gruppe) => gruppe.niedrigsterGefundenerGrundpreis)).toHaveLength(1);
+
+        const stueck = gruppiereAngebote([
+            angebot({ produkt: 'Karton A', preis: 2, grundpreis: '2,00 €/10 Stück' }),
+            angebot({ produkt: 'Karton B', preis: 0.25, grundpreis: '0,25 €/Stk.' })
+        ]);
+        expect(stueck.find((gruppe) => gruppe.produkt === 'Karton A')
+            .niedrigsterGefundenerGrundpreis).toBe(true);
+        expect(stueck.find((gruppe) => gruppe.produkt === 'Karton B')
             .niedrigsterGefundenerGrundpreis).toBe(false);
     });
 

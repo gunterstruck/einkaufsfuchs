@@ -60,8 +60,8 @@ Grenze hält den Ablauf verständlich und verhindert überraschende Zugriffe.
 
 ## Was Foxi beim Import prüft
 
-Foxi nimmt nur Ergebnisse mit der Kennung `foxi-angebote`, Version 1, an.
-Jeder Treffer muss unter anderem enthalten:
+Foxi nimmt Ergebnisse mit der Kennung `foxi-angebote` bis zur aktuellen
+Version 2 an. Jeder Treffer muss unter anderem enthalten:
 
 - Foxi-Artikel und konkretes Händlerprodukt
 - Händler und Markt
@@ -71,17 +71,27 @@ Jeder Treffer muss unter anderem enthalten:
 - eine öffentliche HTTPS-Quelle von `aldi-nord.de`, `aldi-sued.de` oder
   `rewe.de`
 
-Freier Text, fremde Quellen, ungültige Preise und widersprüchliche
-Gültigkeitsdaten werden nicht übernommen. Importiertes HTML wird nie
-ausgeführt. Identische Angebote desselben Händlers in mehreren Filialen fasst
-Foxi zusammen; die einzelnen Märkte bleiben aufklappbar.
+In Version 2 muss der Grundpreis eine positive Zahl und einen eindeutigen
+Nenner tragen, beispielsweise `0,99 €/l`, `1,49 €/kg` oder
+`0,25 €/Stück`. Bereits gespeicherte Ergebnisse der Version 1 bleiben
+lesbar. Ein alter, nicht eindeutig parsebarer Grundpreistext wird angezeigt,
+aber nie für eine Bestpreis-Markierung verwendet. Erkennbare Null- und
+Negativwerte weist Foxi in beiden Versionen ab.
+
+Freier Grundpreistext in Version 2, fremde Quellen, ungültige Preise und
+widersprüchliche Gültigkeitsdaten werden nicht übernommen. Importiertes HTML
+wird nie ausgeführt. Identische Angebote desselben Händlers in mehreren
+Filialen fasst Foxi zusammen; die einzelnen Märkte bleiben aufklappbar.
 
 ## Was die Preismarkierung bedeutet
 
 Foxi behauptet nicht, den gesamten Markt zu kennen. Sind für denselben
-Foxi-Artikel mindestens zwei Grundpreise mit derselben Einheit vorhanden,
-markiert es den niedrigsten davon als **Niedrigster gefundener Grundpreis**.
-Kilogramm wird nicht mit Liter verglichen. Ein einzelner Fund erhält keine
+Foxi-Artikel mindestens zwei vergleichbare Grundpreise vorhanden, markiert es
+den niedrigsten davon als **Niedrigster gefundener Grundpreis**. Angaben pro
+Gramm oder 100 Gramm werden dafür auf Kilogramm umgerechnet, Angaben pro
+Milliliter oder 100 Milliliter auf Liter. Schreibweisen wie `1 l`, `Liter`
+und `l` sowie `Stück` und `Stk.` gelten als gleich. Kilogramm wird weiterhin
+nicht mit Liter verglichen. Ein einzelner Fund erhält keine
 Bestpreis-Auszeichnung.
 
 Ein Wochenangebot ist außerdem nicht automatisch der günstigste Gesamtpreis.

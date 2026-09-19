@@ -22,6 +22,10 @@ let behaelter = null;
 let suchfeld = null;
 let suchbegriff = '';
 
+export function kachelBeschriftung(artikelName, drauf) {
+    return drauf ? `${artikelName} – ${t('katalog.aufDerListe')}` : artikelName;
+}
+
 export function katalogVerdrahten() {
     behaelter = document.getElementById('katalog-inhalt');
     suchfeld = document.getElementById('katalog-suche');
@@ -81,9 +85,14 @@ export function zeichneKatalog() {
 export function synchronisiereKacheln() {
     if (!behaelter) return;
     for (const kachelKnopf of behaelter.querySelectorAll('.kachel')) {
-        const drauf = aufDerListe(kachelKnopf.dataset.artikelId);
+        const artikelId = kachelKnopf.dataset.artikelId;
+        const drauf = aufDerListe(artikelId);
         kachelKnopf.classList.toggle('ist-drauf', drauf);
         kachelKnopf.setAttribute('aria-pressed', drauf ? 'true' : 'false');
+        const artikelName = zustand.artikel.get(artikelId)?.name
+            || kachelKnopf.querySelector?.('.kachel-name')?.textContent
+            || '';
+        kachelKnopf.setAttribute('aria-label', kachelBeschriftung(artikelName, drauf));
     }
 }
 
@@ -120,7 +129,7 @@ function kachel(artikel) {
     knopf.className = 'kachel' + (drauf ? ' ist-drauf' : '');
     knopf.dataset.artikelId = artikel.id;
     knopf.setAttribute('aria-pressed', drauf ? 'true' : 'false');
-    knopf.setAttribute('aria-label', drauf ? `${artikel.name} – ${t('katalog.aufDerListe')}` : artikel.name);
+    knopf.setAttribute('aria-label', kachelBeschriftung(artikel.name, drauf));
 
     const icon = document.createElement('span');
     icon.className = 'kachel-icon';

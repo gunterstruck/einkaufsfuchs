@@ -21,6 +21,41 @@ let behaelter = null;
 /** Kennung des Eintrags, dessen Menge/Notiz gerade offen ist (Experte). */
 let offenerEditor = null;
 
+/** Kompakter Angebotstext für die Listenkarte. Die Kaufbedingung gehört
+ * zum ausgewählten günstigsten Treffer: Ohne sie würde ein „ab“-Preis etwa
+ * trotz Mindestmenge wie ein frei verfügbarer Preis wirken. */
+export function angebotHinweisFuerListe(angebote) {
+    if (!Array.isArray(angebote) || angebote.length === 0) return '';
+    const guenstigster = angebote.reduce(
+        (bisher, angebot) => angebot.preis < bisher.preis ? angebot : bisher
+    );
+    const grundtext = angebote.length === 1
+        ? t(
+            guenstigster.treffer === 'alternative'
+                ? 'angebote.listenAlternative'
+                : 'angebote.listenTreffer',
+            preisDeutsch(guenstigster.preis),
+            guenstigster.haendler,
+            datumDeutsch(new Date(`${guenstigster.gueltigBis}T12:00:00`)),
+            guenstigster.maerkte.length
+        )
+        : t(
+            'angebote.listenMehrere',
+            angebote.length,
+            preisDeutsch(guenstigster.preis),
+            datumDeutsch(new Date(`${angebote.map((a) => a.gueltigBis).sort()[0]}T12:00:00`))
+        );
+    const kaufbedingung = typeof guenstigster.hinweis === 'string'
+        ? guenstigster.hinweis.trim()
+        : '';
+    return kaufbedingung ? `${grundtext} · ${kaufbedingung}` : grundtext;
+}
+
+/** Sichtbarer Hinweis und zugängliche Beschriftung bleiben wortgleich. */
+export function listenkartenBeschriftung(stimmtext, angebotHinweis = '') {
+    return angebotHinweis ? `${stimmtext}. ${angebotHinweis}` : stimmtext;
+}
+
 export function listeVerdrahten() {
     behaelter = document.getElementById('liste-inhalt');
 }
@@ -126,21 +161,8 @@ function zeileZeichnen(eintrag, erledigt = false) {
     let angebotHinweis = '';
     if (!erledigt) {
         const angebote = angeboteFuerArtikel(angebotsergebnis(), eintrag.artikelId);
-        if (angebote.length > 0) {
-            const guenstigster = angebote.reduce(
-                (bisher, angebot) => angebot.preis < bisher.preis ? angebot : bisher
-            );
-            angebotHinweis = angebote.length === 1
-                ? t(
-                    guenstigster.treffer === 'alternative'
-                        ? 'angebote.listenAlternative'
-                        : 'angebote.listenTreffer',
-                    preisDeutsch(guenstigster.preis),
-                    guenstigster.haendler,
-                    datumDeutsch(new Date(`${guenstigster.gueltigBis}T12:00:00`)),
-                    guenstigster.maerkte.length
-                )
-                : t('angebote.listenMehrere', angebote.length, preisDeutsch(guenstigster.preis), datumDeutsch(new Date(`${angebote.map((a) => a.gueltigBis).sort()[0]}T12:00:00`)));
+        angebotHinweis = angebotHinweisFuerListe(angebote);
+        if (angebotHinweis) {
             const marke = document.createElement('span');
             marke.className = 'karte-angebot';
             marke.textContent = angebotHinweis;
@@ -158,7 +180,7 @@ function zeileZeichnen(eintrag, erledigt = false) {
     const stimmtext = erledigt
         ? t('liste.stimmeErledigt', eintrag.artikel.name)
         : t('liste.stimmeOffen', eintrag.artikel.name);
-    karte.setAttribute('aria-label', angebotHinweis ? `${stimmtext}. ${angebotHinweis}` : stimmtext);
+    karte.setAttribute('aria-label', listenkartenBeschriftung(stimmtext, angebotHinweis));
 
     karte.addEventListener('click', async () => {
         if (erledigt) {

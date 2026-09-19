@@ -188,6 +188,18 @@ export function datumFuerDateiname(datum = new Date()) {
    das ist der Teil, den ein Mensch sieht. */
 export const DATEI_TYP = 'foxi-liste';
 export const DATEI_VERSION = 1;
+export const AUSTAUSCHDATEI_GRENZEN = Object.freeze({
+    bytes: 2 * 1024 * 1024,
+    artikelAnzahl: 1000,
+    erzeugt: 80,
+    id: 200,
+    name: 300,
+    kategorieId: 200,
+    kategorieName: 300,
+    icon: 64,
+    menge: 500,
+    notiz: 500
+});
 
 export function alsAustauschdatei(eintraege, artikelNachId, kategorienNachId, datum = new Date()) {
     return {
@@ -215,8 +227,31 @@ export function alsAustauschdatei(eintraege, artikelNachId, kategorienNachId, da
 export function pruefeAustauschdatei(daten) {
     if (!daten || typeof daten !== 'object') return { gueltig: false, grund: 'kaputt' };
     if (daten.typ !== DATEI_TYP) return { gueltig: false, grund: 'fremd' };
-    if (!Array.isArray(daten.artikel)) return { gueltig: false, grund: 'kaputt' };
-    if (Number(daten.version) > DATEI_VERSION) return { gueltig: false, grund: 'zuNeu' };
+    if (!Number.isInteger(daten.version) || daten.version < 1) {
+        return { gueltig: false, grund: 'kaputt' };
+    }
+    if (daten.version > DATEI_VERSION) return { gueltig: false, grund: 'zuNeu' };
+    if (!Array.isArray(daten.artikel) ||
+        daten.artikel.length > AUSTAUSCHDATEI_GRENZEN.artikelAnzahl) {
+        return { gueltig: false, grund: 'kaputt' };
+    }
+    if (daten.erzeugt !== undefined &&
+        (typeof daten.erzeugt !== 'string' || daten.erzeugt.length > AUSTAUSCHDATEI_GRENZEN.erzeugt)) {
+        return { gueltig: false, grund: 'kaputt' };
+    }
+    const textfelder = ['kategorieId', 'kategorieName', 'icon', 'menge', 'notiz'];
+    const artikelGueltig = daten.artikel.every((artikel) => {
+        if (!artikel || typeof artikel !== 'object' || Array.isArray(artikel)) return false;
+        if (typeof artikel.id !== 'string' || !artikel.id.trim() ||
+            artikel.id.length > AUSTAUSCHDATEI_GRENZEN.id) return false;
+        if (typeof artikel.name !== 'string' || !artikel.name.trim() ||
+            artikel.name.length > AUSTAUSCHDATEI_GRENZEN.name) return false;
+        return textfelder.every((feld) => artikel[feld] === undefined || (
+            typeof artikel[feld] === 'string' &&
+            artikel[feld].length <= AUSTAUSCHDATEI_GRENZEN[feld]
+        ));
+    });
+    if (!artikelGueltig) return { gueltig: false, grund: 'kaputt' };
     return { gueltig: true, grund: null };
 }
 
@@ -238,7 +273,10 @@ export function vergleicheImport(fremdeArtikel, eigeneListe) {
         if (!eigen) { neu.push(fremd); continue; }
         const gleicheMenge = (eigen.menge || '') === (fremd.menge || '');
         const gleicheNotiz = (eigen.notiz || '') === (fremd.notiz || '');
-        if (gleicheMenge && gleicheNotiz) doppelt.push(fremd);
+        /* Exportiert werden nur offene Einträge. Ist derselbe Artikel hier
+           schon abgehakt, bedeutet sein Auftauchen in der fremden Datei
+           deshalb eine echte Änderung: Er wird erneut gebraucht. */
+        if (gleicheMenge && gleicheNotiz && !eigen.erledigt) doppelt.push(fremd);
         else abweichend.push(fremd);
     }
 

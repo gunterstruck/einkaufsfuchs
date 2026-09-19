@@ -363,8 +363,9 @@ export async function importAnwenden(fremdeArtikel, modus = 'nurNeue') {
     const neueEintraege = [];
 
     for (const fremd of fremdeArtikel) {
-        const vorhanden = zustand.liste.has(fremd.id);
-        if (vorhanden && modus !== 'alles') continue;
+        const vorhandenerEintrag = zustand.liste.get(fremd.id);
+        const nurReaktivieren = modus !== 'alles' && vorhandenerEintrag?.erledigt;
+        if (vorhandenerEintrag && modus !== 'alles' && !nurReaktivieren) continue;
 
         if (!zustand.artikel.has(fremd.id)) {
             const artikel = {
@@ -381,8 +382,31 @@ export async function importAnwenden(fremdeArtikel, modus = 'nurNeue') {
         }
 
         const artikel = zustand.artikel.get(fremd.id);
-        const wunsch = [fremd.menge, fremd.notiz].filter(Boolean).join(' · ').trim();
-        if (artikel && wunsch && artikel.standardWunsch !== wunsch) {
+        /* „Nur neue“ betrachtet einen abgehakten Artikel als neuen Bedarf,
+           bewahrt aber die Angaben dieses Haushalts. Die fremde Datei darf
+           lokale Menge, Notiz und Produktwunsch erst bei „Alles übernehmen“
+           ersetzen. */
+        if (nurReaktivieren) {
+            const eintrag = {
+                ...vorhandenerEintrag,
+                artikelId: fremd.id,
+                erledigt: false,
+                erledigtAm: null
+            };
+            zustand.liste.set(eintrag.artikelId, eintrag);
+            neueEintraege.push(eintrag);
+            continue;
+        }
+
+        const wunsch = [fremd.menge, fremd.notiz]
+            .map((teil) => typeof teil === 'string' ? teil.trim() : '')
+            .filter(Boolean)
+            .join(' · ');
+        /* Bei „Alles übernehmen“ gewinnt auch ein bewusst leerer Wert aus
+           der Datei. Andernfalls würde der lokale Produktwunsch die gewählte
+           Importentscheidung unmittelbar wieder überschreiben. */
+        const bisherigerWunsch = artikel?.standardWunsch || '';
+        if (artikel && (modus === 'alles' || wunsch) && bisherigerWunsch !== wunsch) {
             artikel.standardWunsch = wunsch.slice(0, 180);
             if (!neueArtikel.includes(artikel)) neueArtikel.push(artikel);
         }
