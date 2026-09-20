@@ -36,6 +36,7 @@ grep -rn "\.style\.\|innerHTML\|<style\|style=" src/ index.html | grep -v "^src/
 | Farben, Radien, Schatten | `src/styles/farben.css` (Eigenes) |
 | `src/styles/stamm/` | **nicht anfassen** – Zeile für Zeile aus TourFuchs |
 | Reine Rechenregeln | `src/logik.js` (ohne DOM, deshalb testbar) |
+| Angebotscheck | `src/angebotsradar.js` + `src/ui/angebote.js` |
 | Zustand + IndexedDB | `src/zustand.js`, `src/db.js` |
 | Die drei Bildschirme | `src/ui/liste.js`, `katalog.js`, `mehr.js` |
 
@@ -68,6 +69,16 @@ Netzwerkanfrage und lässt bei jedem Konsolenfehler durchfallen.
   nicht die Seite.
 - **Zwei Namen:** `app.name` (EinkaufsFuchs) nach außen, `app.kurz` (Foxi)
   im Gebrauch. Die Kopfzeile wechselt bei 420 px.
+
+## Was zurück in die App fließt, muss überprüfbar sein
+
+Der Angebotscheck nimmt ein Ergebnis vom Agenten **wieder in die App** auf.
+Deshalb gilt dort das Gegenteil der offenen Klartext-Exporte:
+`pruefeAngebotsergebnis()` nimmt ein Angebot nur an, wenn jedes Feld trägt –
+Preis, Währung, lesbarer Grundpreis, Gültigkeitszeitraum, Trefferart – und
+die **Quelle per HTTPS auf einer Erlaubnisliste offizieller Händler-Hosts**
+liegt. Wer diese Prüfung lockert, hebelt den einzigen Schutz aus, den die App
+gegen erfundene Preise hat. Details: `docs/KONZEPT.md`, Kapitel 6.7.
 
 ## Der Teil, der außerhalb dieses Repos lebt
 
