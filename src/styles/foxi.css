@@ -35,11 +35,20 @@
         calc(var(--tableiste-height) + env(safe-area-inset-bottom));
     overflow: hidden;
     overscroll-behavior: none;
-    /* Der blaue Standard-Schimmer, den mobile Browser über jedes angetippte
-       Element legen, arbeitet gegen das Grün – und er kommt zu spät, um als
-       Rückmeldung zu taugen. Foxi antwortet stattdessen mit dem, was das
-       Element selbst tut: Die Kachel schrumpft unter dem Finger, die Zeile
-       färbt sich, der Reiter füllt sich. */
+    /* Kein blauer Schimmer unter dem Finger – warum, steht bei
+       `.dialog-auflage`, wo dieselbe Zeile ein zweites Mal nötig ist. */
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* Der blaue Standard-Schimmer, den mobile Browser über jedes angetippte
+   Element legen, arbeitet gegen den Leitton – und er kommt zu spät, um als
+   Rückmeldung zu taugen. Foxi antwortet stattdessen mit dem, was das Element
+   selbst tut: Die Kachel schrumpft unter dem Finger, die Zeile färbt sich,
+   der Reiter füllt sich, der Knopf sinkt ein.
+
+   Die Regel stand zuerst nur auf `#app`. Dialoge hängen aber an `body` – im
+   Artikelblatt lag der Schimmer deshalb quer über den angetippten Knöpfen. */
+.dialog-auflage {
     -webkit-tap-highlight-color: transparent;
 }
 
@@ -335,6 +344,30 @@ body:not(.modus-experte) .experte-nur { display: none !important; }
 }
 .mengen-editor input { flex: 1 1 128px; min-height: 42px; }
 .mengen-editor button { flex: 0 0 auto; min-height: 42px; }
+/* Gelernte Mengen: runde Knöpfe, damit man sie nicht mit dem eckigen
+   Fotoknopf verwechselt – der eine tut etwas, die anderen füllen nur das
+   Feld darüber. Ein langer Wunsch wird gekürzt statt umbrochen; vollständig
+   steht er im `aria-label` und nach dem Tipp im Feld. */
+.mengen-chips {
+    flex: 1 0 100%;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+}
+.mengen-chips .blatt-abschnitt { flex: 1 0 100%; margin: 0; }
+.mengen-chips button {
+    flex: 0 1 auto;
+    max-width: 100%;
+    min-height: 40px;
+    padding: 6px 13px;
+    border-radius: 999px;
+    font-size: 0.92rem;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
 .produktfoto-aktionen {
     flex: 1 0 100%;
     display: flex;

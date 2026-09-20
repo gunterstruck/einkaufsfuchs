@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-    kaufScore, sortiereArtikel, oftGebraucht, sucheArtikel,
+    kaufScore, sortiereArtikel, oftGebraucht, sucheArtikel, gelernteMengen,
     gruppiereListe, alsKlartext, alsStammartikelText, kaufStatistik,
     TAG_MS, HALBWERTSZEIT_TAGE
 } from '../src/logik.js';
@@ -101,6 +101,41 @@ describe('Suche', () => {
 
     it('gibt bei leerem Begriff nichts zurück', () => {
         expect(sucheArtikel(katalog, '   ', JETZT)).toEqual([]);
+    });
+});
+
+describe('Gelernte Mengen', () => {
+    const verlauf = [
+        { text: '1 Liter', zeit: 1 },
+        { text: '2 Liter', zeit: 2 },
+        { text: '1 Liter', zeit: 3 },
+        { text: 'die haltbare', zeit: 4 }
+    ];
+
+    it('schlägt die jüngsten Wünsche zuerst vor, jeden Wortlaut nur einmal', () => {
+        expect(gelernteMengen(verlauf)).toEqual(['die haltbare', '1 Liter', '2 Liter']);
+    });
+
+    it('zeigt höchstens drei', () => {
+        const viele = ['a', 'b', 'c', 'd', 'e'].map((text, i) => ({ text, zeit: i }));
+        expect(gelernteMengen(viele)).toEqual(['e', 'd', 'c']);
+    });
+
+    /* Ein Vorschlag, der genau das einsetzt, was schon im Feld steht, ist
+       kein Vorschlag, sondern ein Knopf, der nichts tut. */
+    it('lässt weg, was ohnehin schon im Feld steht', () => {
+        expect(gelernteMengen(verlauf, 'die haltbare')).toEqual(['1 Liter', '2 Liter']);
+        expect(gelernteMengen(verlauf, '  DIE HALTBARE ')).toEqual(['1 Liter', '2 Liter']);
+    });
+
+    it('behält die zuletzt getippte Schreibweise', () => {
+        const gemischt = [{ text: '2 LITER', zeit: 1 }, { text: '2 liter', zeit: 2 }];
+        expect(gelernteMengen(gemischt)).toEqual(['2 liter']);
+    });
+
+    it('kommt mit fehlender Historie und kaputten Einträgen zurecht', () => {
+        expect(gelernteMengen(undefined)).toEqual([]);
+        expect(gelernteMengen([{ zeit: 1 }, { text: '   ', zeit: 2 }, null])).toEqual([]);
     });
 });
 

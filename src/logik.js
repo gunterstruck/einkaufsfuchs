@@ -56,6 +56,39 @@ export function oftGebraucht(artikel, anzahl = 12, jetzt = Date.now()) {
         .slice(0, anzahl);
 }
 
+/**
+ * Die zweite gelernte Sache: **wie** dieser Haushalt einen Artikel kauft.
+ *
+ * Beim Abhaken merkt sich Foxi den Produktwunsch, der in dem Moment an der
+ * Zeile stand – das ist die ehrliche Angabe, denn sie lag im Wagen. Hier
+ * werden daraus Vorschläge: jüngste zuerst, jeder Wortlaut nur einmal.
+ *
+ * `ausser` ist der Text, der ohnehin schon im Feld steht. Ein Vorschlag, der
+ * nichts ändert, ist kein Vorschlag, sondern ein Knopf, der nichts tut.
+ *
+ * Groß- und Kleinschreibung entscheidet nicht über Gleichheit („2 Liter" und
+ * „2 liter" sind dasselbe), aber die zuletzt getippte Schreibweise gewinnt –
+ * deshalb läuft die Schleife von hinten.
+ */
+export function gelernteMengen(letzteMengen, ausser = '', anzahl = 3) {
+    if (!Array.isArray(letzteMengen)) return [];
+    const schluessel = (text) => normalisiere(text);
+    const gesehen = new Set();
+    const uebergangen = schluessel(ausser);
+    if (uebergangen) gesehen.add(uebergangen);
+
+    const vorschlaege = [];
+    for (let i = letzteMengen.length - 1; i >= 0 && vorschlaege.length < anzahl; i--) {
+        const text = typeof letzteMengen[i]?.text === 'string' ? letzteMengen[i].text.trim() : '';
+        if (!text) continue;
+        const marke = schluessel(text);
+        if (gesehen.has(marke)) continue;
+        gesehen.add(marke);
+        vorschlaege.push(text);
+    }
+    return vorschlaege;
+}
+
 /** Suche: Anfang eines Wortes zählt mehr als die Mitte, damit „Milch" bei
  *  „mil" vor „Mandelmilch" steht. */
 export function sucheArtikel(artikel, begriff, jetzt = Date.now()) {
@@ -177,9 +210,10 @@ export function datumFuerDateiname(datum = new Date()) {
    Name, Kategorie und Zeichen. So funktioniert die Datei auch dann, wenn
    dort ein selbst angelegter Artikel unbekannt ist.
 
-   Was die Datei NICHT enthält: `letzteKaeufe`. Die Kaufhistorie ist das
-   Gedächtnis eines Haushalts, keine Beilage zu einer Einkaufsliste – wer
-   eine Liste weitergibt, gibt nicht mit, wie oft er Bier kauft.
+   Was die Datei NICHT enthält: `letzteKaeufe` und `letzteMengen`. Die
+   Kaufhistorie ist das Gedächtnis eines Haushalts, keine Beilage zu einer
+   Einkaufsliste – wer eine Liste weitergibt, gibt nicht mit, wie oft er Bier
+   kauft und in welcher Menge.
    ──────────────────────────────────────────────────────────────────────── */
 
 /* Auch die Kennung im Dateikopf bleibt, wie sie ist. Sie steht in jeder

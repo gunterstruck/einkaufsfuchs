@@ -13,7 +13,10 @@ import * as db from './db.js';
 const zuhoerer = new Set();
 
 export const zustand = {
-    artikel: new Map(),      // id → { id, name, kategorieId, icon, zaehler, letzteKaeufe[] }
+    /* `letzteMengen` entsteht erst beim ersten Abhaken mit Produktwunsch –
+       deshalb steht es in keinem frisch angelegten Artikel. Jeder Zugriff
+       rechnet mit seiner Abwesenheit. */
+    artikel: new Map(),      // id → { id, name, kategorieId, icon, zaehler, letzteKaeufe[], letzteMengen[]? }
     kategorien: [],          // [{ id, name, icon, position }]
     liste: new Map(),        // artikelId → { artikelId, menge, notiz, erledigt, erledigtAm }
     bilder: new Map(),       // artikelId → lokales, komprimiertes Produktfoto
@@ -168,6 +171,12 @@ export async function umschalten(artikelId) {
  * die Reihenfolge im Katalog. Die Historie wird bei 60 Einträgen gekappt:
  * Was zwei Jahre zurückliegt, wiegt nach der Halbwertszeit ohnehin nichts
  * mehr, kostet aber Platz in jeder Sicherung.
+ *
+ * Seit dem Artikelblatt lernt Foxi hier eine zweite Sache: den Produktwunsch,
+ * der in diesem Moment an der Zeile stand. Genau hier ist er belastbar – er
+ * lag im Wagen. Ein Wunsch, der nur getippt und wieder verworfen wurde, wird
+ * nicht zum Vorschlag. Gekappt wird bei 20; mehr sieht ohnehin niemand, und
+ * jeder Eintrag steht in jeder Sicherung.
  */
 export async function abhaken(artikelId) {
     const eintrag = zustand.liste.get(artikelId);
@@ -180,6 +189,17 @@ export async function abhaken(artikelId) {
     artikel.letzteKaeufe = [...(artikel.letzteKaeufe || []), jetzt].slice(-60);
     artikel.zaehler = (artikel.zaehler || 0) + 1;
 
+    /* Der Zeitstempel ist derselbe wie in `letzteKaeufe` und in
+       `eintrag.erledigtAm`. Daran – und nur daran – findet „Rückgängig" den
+       Eintrag wieder. */
+    const gekaufterWunsch = String(eintrag.menge || '').trim().slice(0, 180);
+    if (gekaufterWunsch) {
+        artikel.letzteMengen = [
+            ...(artikel.letzteMengen || []),
+            { text: gekaufterWunsch, zeit: jetzt }
+        ].slice(-20);
+    }
+
     await Promise.all([
         db.lege(db.SPEICHER.LISTE, eintrag),
         db.lege(db.SPEICHER.ARTIKEL, artikel)
@@ -187,7 +207,9 @@ export async function abhaken(artikelId) {
     melde('abhaken');
 }
 
-/** Rückgängig: der Zeitstempel dieses Abhakens verschwindet wieder. */
+/** Rückgängig: der Zeitstempel dieses Abhakens verschwindet wieder – und mit
+ *  ihm der Wunsch, den Foxi dabei gelernt hat. „Rückgängig" heißt rückgängig,
+ *  nicht „fast". */
 export async function zurueckholen(artikelId) {
     const eintrag = zustand.liste.get(artikelId);
     const artikel = zustand.artikel.get(artikelId);
@@ -200,6 +222,9 @@ export async function zurueckholen(artikelId) {
         const stelle = (artikel.letzteKaeufe || []).lastIndexOf(zeitpunkt);
         if (stelle >= 0) artikel.letzteKaeufe.splice(stelle, 1);
         artikel.zaehler = Math.max(0, (artikel.zaehler || 1) - 1);
+        if (artikel.letzteMengen?.length) {
+            artikel.letzteMengen = artikel.letzteMengen.filter((m) => m.zeit !== zeitpunkt);
+        }
     }
 
     await Promise.all([
