@@ -15,7 +15,7 @@
  */
 
 import { t } from '../texte.js';
-import { datumDeutsch } from '../logik.js';
+import { datumDeutsch, gelernteMengen } from '../logik.js';
 import { angeboteFuerArtikel, preisDeutsch } from '../angebotsradar.js';
 import {
     angebotsergebnis, produktfoto, produktfotoSetzen, produktfotoLoeschen,
@@ -167,6 +167,37 @@ function wunschTeil(eintrag, neuZeichnen) {
     wunsch.setAttribute('aria-label', t('menge.wunschBeschriftung'));
     wunsch.enterKeyHint = 'done';
 
+    /* Die gelernten Mengen: was beim Abhaken dieses Artikels tatsächlich an
+       der Zeile stand. Drei Stück – wer „1 l", „2 l" und „die haltbare" da
+       stehen hat, tippt im Laden nichts mehr; eine vierte Zeile wäre schon
+       eine Liste zum Lesen statt ein Griff zum Tippen.
+
+       Ein Tipp füllt nur das Feld. Er speichert nicht und schließt nicht: Das
+       Blatt ändert von sich aus nichts (siehe `zeigeArtikelblatt`), und
+       „2 Liter" ist oft der Anfang von „2 Liter, die haltbare". Gesichert
+       wird weiterhin genau über „Fertig". */
+    const vorschlaege = gelernteMengen(eintrag.artikel.letzteMengen, wunsch.value);
+    const chips = document.createElement('div');
+    chips.className = 'mengen-chips';
+    if (vorschlaege.length) {
+        const titel = document.createElement('h3');
+        titel.className = 'blatt-abschnitt';
+        titel.textContent = t('menge.gelernte');
+        chips.append(titel);
+        for (const text of vorschlaege) {
+            const chip = document.createElement('button');
+            chip.type = 'button';
+            chip.className = 'mengen-chip';
+            chip.textContent = text;
+            chip.setAttribute('aria-label', t('menge.gelernteUebernehmen', text));
+            chip.addEventListener('click', () => {
+                wunsch.value = text;
+                wunsch.focus();
+            });
+            chips.append(chip);
+        }
+    }
+
     const fotoAktionen = document.createElement('div');
     fotoAktionen.className = 'produktfoto-aktionen';
     const fotoWahl = document.createElement('input');
@@ -227,7 +258,9 @@ function wunschTeil(eintrag, neuZeichnen) {
         await produktwunschSetzen(eintrag.artikelId, wunsch.value);
     }
 
-    form.append(wunsch, fotoAktionen);
+    form.append(wunsch);
+    if (vorschlaege.length) form.append(chips);
+    form.append(fotoAktionen);
     return { form, sichern };
 }
 

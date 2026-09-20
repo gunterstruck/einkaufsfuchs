@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const dbDoppel = vi.hoisted(() => ({
+    lege: vi.fn(async () => {}),
     legeViele: vi.fn(async () => {})
 }));
 
@@ -9,10 +10,11 @@ vi.mock('../src/db.js', () => ({
         ARTIKEL: 'artikel',
         LISTE: 'liste'
     },
+    lege: dbDoppel.lege,
     legeViele: dbDoppel.legeViele
 }));
 
-import { importAnwenden, zustand } from '../src/zustand.js';
+import { abhaken, importAnwenden, zurueckholen, zustand } from '../src/zustand.js';
 
 describe('Listenimport', () => {
     beforeEach(() => {
@@ -98,5 +100,57 @@ describe('Listenimport', () => {
         expect(zustand.artikel.get('milch').standardWunsch).toBe('');
         expect(zustand.liste.get('milch').menge).toBe('');
         expect(zustand.liste.get('milch').menge).not.toContain('·');
+    });
+});
+
+/* Das Abhaken ist der einzige Ort, an dem Foxi etwas lernt – und damit auch
+   der einzige, an dem ein Produktwunsch zum Vorschlag wird. Ein nur getippter
+   Wunsch zählt bewusst nicht: Er lag nie im Wagen. */
+describe('Gelernte Mengen beim Abhaken', () => {
+    beforeEach(() => {
+        dbDoppel.lege.mockClear();
+        zustand.artikel = new Map([[
+            'milch',
+            { id: 'milch', name: 'Milch', kategorieId: 'molkerei', icon: '🥛', zaehler: 0, letzteKaeufe: [] }
+        ]]);
+        zustand.liste = new Map([[
+            'milch',
+            { artikelId: 'milch', menge: '2 Liter', notiz: '', erledigt: false, erledigtAm: null }
+        ]]);
+    });
+
+    it('merkt sich den Produktwunsch, der beim Abhaken an der Zeile stand', async () => {
+        await abhaken('milch');
+        const artikel = zustand.artikel.get('milch');
+        expect(artikel.letzteMengen).toHaveLength(1);
+        expect(artikel.letzteMengen[0].text).toBe('2 Liter');
+        /* Derselbe Zeitstempel wie in `letzteKaeufe` und `erledigtAm` – daran
+           findet „Rückgängig" den Eintrag wieder. */
+        expect(artikel.letzteMengen[0].zeit).toBe(zustand.liste.get('milch').erledigtAm);
+        expect(artikel.letzteMengen[0].zeit).toBe(artikel.letzteKaeufe.at(-1));
+    });
+
+    it('merkt sich nichts, wenn die Zeile ohne Produktwunsch abgehakt wird', async () => {
+        zustand.liste.get('milch').menge = '   ';
+        await abhaken('milch');
+        expect(zustand.artikel.get('milch').letzteMengen).toBeUndefined();
+    });
+
+    /* „Rückgängig" heißt rückgängig. Bliebe der gelernte Wunsch stehen,
+       schlüge Foxi im Blatt etwas vor, das nie gekauft wurde. */
+    it('nimmt den gelernten Wunsch beim Zurückholen wieder zurück', async () => {
+        await abhaken('milch');
+        await zurueckholen('milch');
+        expect(zustand.artikel.get('milch').letzteMengen).toEqual([]);
+        expect(zustand.artikel.get('milch').letzteKaeufe).toEqual([]);
+    });
+
+    it('kappt die Historie bei 20 Einträgen', async () => {
+        const artikel = zustand.artikel.get('milch');
+        artikel.letzteMengen = Array.from({ length: 20 }, (_, i) => ({ text: `${i} Liter`, zeit: i + 1 }));
+        await abhaken('milch');
+        expect(artikel.letzteMengen).toHaveLength(20);
+        expect(artikel.letzteMengen[0].text).toBe('1 Liter');
+        expect(artikel.letzteMengen.at(-1).text).toBe('2 Liter');
     });
 });

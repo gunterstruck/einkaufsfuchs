@@ -152,6 +152,28 @@ das Kind längst ausgezogen ist. Die Halbwertszeit von 30 Tagen ist der
 Kompromiss zwischen „reagiert auf Veränderung" und „vergisst nicht, was man
 alle zwei Wochen braucht".
 
+**Die zweite gelernte Sache: wie dieser Haushalt einen Artikel kauft.** Beim
+Abhaken merkt sich Foxi neben dem Zeitstempel auch den Produktwunsch, der in
+diesem Moment an der Zeile stand (`letzteMengen`, gekappt bei 20 Einträgen).
+Im Artikelblatt stehen die letzten drei **verschiedenen** als Knöpfe unter
+dem Feld, überschrieben mit „Zuletzt so gekauft".
+
+Drei Entscheidungen daran sind wichtiger, als sie aussehen:
+
+1. **Gelernt wird beim Abhaken, nicht beim Tippen.** Ein Wunsch, der nur
+   eingetippt und wieder verworfen wurde, lag nie im Wagen. Derselbe Ort und
+   derselbe Zeitstempel wie bei `letzteKaeufe` – daran räumt „Rückgängig"
+   beides zusammen wieder ab.
+2. **Ein Tipp füllt nur das Feld.** Er speichert nicht und schließt nicht:
+   Das Blatt ändert von sich aus nichts, und „2 Liter" ist oft der Anfang von
+   „2 Liter, die haltbare".
+3. **Was ohnehin im Feld steht, wird nicht angeboten** – sonst stünde neben
+   dem aktuellen Wunsch ein Knopf, der nichts tut.
+
+`letzteMengen` bleibt wie `letzteKaeufe` auf dem Gerät: nicht in der
+geteilten Datei, nicht im KI-Auftrag. Wer eine Liste weitergibt, gibt nicht
+mit, in welchen Mengen er einkauft.
+
 Nach etwa zwei Wochen stehen die zwölf Standardartikel des Haushalts auf dem
 ersten Bildschirm. **Das ist der Moment, in dem sich die App „meine"
 anfühlt** – und der einzige Punkt, an dem sie sich von einer Notizzettel-App
@@ -491,7 +513,8 @@ Links tragen `--color-primary-dark`.
 ### 8.3 Datenmodell
 
 ```
-artikel     { id, name, kategorieId, icon, zaehler, letzteKaeufe[], eigen }
+artikel     { id, name, kategorieId, icon, zaehler, letzteKaeufe[], eigen,
+              standardWunsch?, letzteMengen?[{ text, zeit }] }
 listeItem   { artikelId, menge, notiz, erledigt, erledigtAm }
 kategorie   { id, name, icon, position, ursprung }
 rezept      { id, name, artikelIds[], eigen }
@@ -500,12 +523,17 @@ einstellung { schluessel, wert }        // modus, ort, katalogVersion
 
 `letzteKaeufe` ist das Herzstück: Aus ihm speist sich die lernende
 Sortierung, die Statistik, der Stammartikel-Export – und später die
-Rhythmus-Erkennung.
+Rhythmus-Erkennung. `letzteMengen` steht daneben und beantwortet die zweite
+Frage: nicht *ob*, sondern *wie* dieser Haushalt einen Artikel kauft
+(Kapitel 4.4). Beide entstehen am selben Ort, beim Abhaken, und tragen
+denselben Zeitstempel – nur deshalb kann „Rückgängig" beide wieder abräumen.
+Die Felder mit `?` gibt es erst, sobald sie gebraucht werden; jeder Zugriff
+rechnet mit ihrer Abwesenheit.
 
-Die Austauschdatei trägt **bewusst keine `letzteKaeufe`**. Die Kaufhistorie
-ist das Gedächtnis eines Haushalts, keine Beilage zu einer Einkaufsliste;
-wer eine Liste weitergibt, gibt nicht mit, wie oft er Bier kauft. Ein Test
-hält das fest.
+Die Austauschdatei trägt **bewusst weder `letzteKaeufe` noch
+`letzteMengen`**. Die Kaufhistorie ist das Gedächtnis eines Haushalts, keine
+Beilage zu einer Einkaufsliste; wer eine Liste weitergibt, gibt nicht mit,
+wie oft er Bier kauft und in welcher Menge. Ein Test hält das fest.
 
 ---
 
@@ -563,16 +591,20 @@ Leere – die Geste passiert dann einfach nicht.
 legen ihn über jedes angetippte Element, und als Rückmeldung taugt er
 ohnehin nicht, weil er zu spät kommt.
 `-webkit-tap-highlight-color: transparent` auf `#app`, dafür echte
-`:active`-Zustände.
+`:active`-Zustände. **Nachtrag aus 0.9.1:** Dialoge hängen an `body`, nicht
+an `#app` – der Schimmer lag dort weiter über jedem Knopf und fiel erst auf
+dem Bildschirmfoto der gelernten Mengen auf. Eine Regel, die an einem
+Container hängt, gilt eben nur für dessen Kinder; was über den Baum hinaus
+gelten soll, gehört an beide Wurzeln.
 
 ---
 
 ## 11. Prüfen
 
 ```bash
-npm test                    # 93 Unit-Tests: Sortierung, Suche, Gruppierung,
+npm test                    # 102 Unit-Tests: Sortierung, Suche, Gruppierung,
                             # Exporte, Import, Datenintegrität
-node tools/durchlauf.mjs    # 68 Prüfungen im echten Browser (Chromium,
+node tools/durchlauf.mjs    # 71 Prüfungen im echten Browser (Chromium,
                             # iPhone-13-Profil) + die Bilder in docs/bilder/
 ```
 
@@ -601,13 +633,14 @@ hält. Im Code steht Folgendes, hier steht es noch nicht:
 - **Das Produktgedächtnis** und die Verwaltung **persönlicher Märkte**
   (`aktiveMaerkte`). Kapitel 6.7 erklärt, wofür die Märkte gebraucht werden,
   aber nicht, wie man sie pflegt.
-- **Die Mengenangabe** ist bis heute ein freies Textfeld. Für „800 g
-  Hähnchenbrustfilet" reicht das, gut ist es nicht. Zähler mit Einheiten
-  wären der falsche Reflex – sie verlangten für 476 Artikel je eine
-  Einheit, und ausgerechnet beim Fleisch wäre sie strittig (Gramm? Stück?
-  Packung?). Der naheliegende Weg wäre derselbe Trick wie beim lernenden
-  Katalog: die zuletzt benutzten Mengen je Artikel merken und als Chips
-  anbieten. Noch nicht gebaut.
+- **Die Mengenangabe** ist weiterhin ein freies Textfeld, und das bleibt sie.
+  Zähler mit Einheiten wären der falsche Reflex – sie verlangten für 476
+  Artikel je eine Einheit, und ausgerechnet beim Fleisch wäre sie strittig
+  (Gramm? Stück? Packung?). Der Weg daraus war derselbe Trick wie beim
+  lernenden Katalog: die zuletzt gekauften Mengen je Artikel merken und als
+  Knöpfe anbieten – seit 0.9.1 gebaut, beschrieben in Kapitel 4.4. Offen
+  bleibt der Fall, für den auch das nicht reicht: der Artikel, den man jedes
+  Mal anders kauft.
 - **Der Updateweg** der PWA (`src/pwa-update.js`, geprüft in
   `tests/pwa.test.js`), der Version, Manifest, Icon-Adressen und den
   Service-Worker-Zwischenspeicher zusammenhält.

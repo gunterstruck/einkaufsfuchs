@@ -275,7 +275,13 @@ const DE = {
         fotoAendern: 'Foto ändern',
         fotoLoeschen: 'Foto entfernen',
         fotoFehler: 'Das Foto konnte nicht lokal gespeichert werden.',
-        fertig: 'Fertig'
+        fertig: 'Fertig',
+        /* Nicht „Vorschläge": Der Unterschied ist, woher sie kommen. Foxi rät
+           nicht, es erinnert sich – an das, was beim Abhaken an der Zeile
+           stand. Die Überschrift sagt genau das, sonst stehen da drei Knöpfe
+           ohne Herkunft. */
+        gelernte: 'Zuletzt so gekauft',
+        gelernteUebernehmen: (text) => `„${text}" übernehmen`
     },
 
     /**

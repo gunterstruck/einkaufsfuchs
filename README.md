@@ -4,7 +4,7 @@
 ![Kein Konto](https://img.shields.io/badge/Kein%20Konto-kein%20Login%2C%20kein%20Backend-0f766e)
 ![PWA](https://img.shields.io/badge/PWA-offlinef%C3%A4hig-purple)
 ![MIT License](https://img.shields.io/badge/License-MIT-yellow)
-![Version](https://img.shields.io/badge/Version-0.9.0-orange)
+![Version](https://img.shields.io/badge/Version-0.9.1-orange)
 
 **Tippen statt Tippen.**
 
@@ -331,7 +331,7 @@ in den normalen Listenexport aufgenommen.
 
 ## Stand und was als Nächstes kommt
 
-**Gebaut (v0.9.0):** Version 1 ist inhaltlich vollständig – Basismodus,
+**Gebaut (v0.9.1):** Version 1 ist inhaltlich vollständig – Basismodus,
 lernender Katalog, Rezepte, Kategorie-Reihenfolge per Ziehen, Teilen als
 Datei mit Zusammenführung beim Import, Briefing-Export, Statistik,
 Offlinebetrieb, Installierbarkeit. Der geführte Angebotscheck verbindet Foxis
@@ -343,6 +343,12 @@ Produktwunsch, Foto und alle Angebote zu diesem Artikel – mit Händler,
 Grundpreis, Filialen und Verweis auf die Händlerseite. Die Listenkarte selbst
 bleibt dabei ein ungeteiltes Ziel zum Abhaken; warum das so ist, steht in
 [docs/KONZEPT.md](docs/KONZEPT.md), Kapitel 4.1.
+
+Seit 0.9.1 steht dort auch **„Zuletzt so gekauft"**: Beim Abhaken merkt sich
+Foxi den Produktwunsch, der in dem Moment an der Zeile stand, und bietet die
+letzten drei verschiedenen als Knöpfe an. Ein Tipp füllt das Feld – gespeichert
+wird weiterhin nur über „Fertig". Diese Historie bleibt wie `letzteKaeufe` auf
+dem Gerät: Sie steht in keiner geteilten Datei und in keinem KI-Auftrag.
 
 **Als Nächstes:** auf echten Geräten fahren. Die Prüfstrecke läuft in
 Chromium; die Emoji stammen aber aus der Schrift des Betriebssystems, und

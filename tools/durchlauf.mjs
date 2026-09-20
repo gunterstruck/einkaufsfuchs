@@ -570,6 +570,54 @@ await seite.screenshot({ path: join(bilder, '15-artikelblatt.png') });
 
 await seite.locator('.dialog-abbruch').tap();
 await seite.waitForTimeout(200);
+
+/* ── Gelernte Mengen ────────────────────────────────────────────────────────
+
+   Zwei Einkäufe mit verschiedenen Wünschen, dann muss der ältere im Blatt
+   als Knopf stehen. Der Weg ist der echte: Wunsch eintragen, abhaken,
+   erledigte entfernen, Artikel erneut auf die Liste. */
+async function butterKaufen(wunsch) {
+    await seite.waitForSelector('#toast', { state: 'hidden' });
+    await seite.locator('#bereich-liste [data-artikel-id="butter"] ~ .karte-stift').tap();
+    await seite.waitForSelector('.dialog .mengen-editor');
+    await seite.locator('.mengen-editor input[type="text"]').fill(wunsch);
+    await seite.locator('.dialog-knoepfe button.primary').tap();
+    await seite.waitForSelector('.dialog', { state: 'detached' });
+    await seite.locator('#bereich-liste [data-artikel-id="butter"]').tap();
+    await seite.waitForSelector('.erledigt-block');
+    await seite.locator('.erledigt-kopf button').tap();
+    await seite.waitForTimeout(120);
+    await seite.locator('#tab-katalog').tap();
+    await seite.locator('#katalog-suche').fill('Butter');
+    await seite.waitForSelector('.kachel');
+    await seite.locator('.kachel').first().tap();
+    await seite.locator('#katalog-suche').fill('');
+    await seite.locator('#tab-liste').tap();
+    await seite.waitForSelector('#bereich-liste [data-artikel-id="butter"]');
+}
+
+await butterKaufen('1 Stück');
+await butterKaufen('250 g Markenbutter');
+
+await seite.waitForSelector('#toast', { state: 'hidden' });
+await seite.locator('#bereich-liste [data-artikel-id="butter"] ~ .karte-stift').tap();
+await seite.waitForSelector('.dialog .mengen-editor');
+const chips = await seite.locator('.mengen-chips button').allTextContents();
+pruefe(chips.includes('1 Stück'),
+    `Das Blatt bietet an, was zuletzt tatsächlich gekauft wurde (${chips.join(', ') || 'nichts'})`);
+/* Der Wunsch, der ohnehin im Feld steht, ist kein Vorschlag, sondern ein
+   Knopf, der nichts tut. */
+pruefe(!chips.includes('250 g Markenbutter') && chips.length <= 3,
+    'Der aktuelle Wunsch steht nicht noch einmal als Knopf daneben');
+await seite.locator('.mengen-chips button', { hasText: '1 Stück' }).tap();
+pruefe(await seite.locator('.mengen-editor input[type="text"]').inputValue() === '1 Stück',
+    'Ein Tipp auf den Knopf füllt das Feld');
+await seite.screenshot({ path: join(bilder, '16-gelernte-mengen.png') });
+
+/* Abbrechen, damit dieser Abschnitt den Artikel so hinterlässt, wie er ihn
+   vorgefunden hat. */
+await seite.locator('.dialog-abbruch').tap();
+await seite.waitForTimeout(200);
 /* Den Modus so hinterlassen, wie dieser Abschnitt ihn vorgefunden hat: Der
    Lauf steht hier auf Experte, und das lange Drücken weiter unten gibt es
    nur dort. Ein „aufgeräumtes" Zurückschalten ließ genau diese zwei
@@ -630,7 +678,11 @@ pruefe(sonstiges === 1, 'Er landet unter „Sonstiges", nicht in der ersten Kate
 /* ── Experte: Statistik ─────────────────────────────────────────────────── */
 await seite.locator('#tab-mehr').tap();
 await seite.waitForSelector('.statistikliste');
-const stat = await seite.locator('.statistikliste li').first().textContent();
+/* Ausdrücklich an einem benannten Artikel statt am ersten Eintrag: Butter
+   steht inzwischen bei zwölf, weil der Abschnitt über die gelernten Mengen
+   zweimal echt eingekauft hat. Milch ist die Zeile, die genau die zehn
+   Durchgänge zählt – und die Prüfung sagt jetzt, welche sie meint. */
+const stat = await seite.locator('.statistikliste li', { hasText: 'Milch' }).first().textContent();
 pruefe(/10×/.test(stat || ''), `Die Statistik zählt die zehn Einkäufe (${stat?.trim()})`);
 /* `fullPage` bringt hier nichts: Bei Foxi scrollt nicht die Seite, sondern
    der Bereich darin (`.bereich` liegt absolut mit eigenem Überlauf). Ein
