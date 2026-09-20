@@ -306,6 +306,67 @@ ist schlimmer als eine fehlende – nach ihr fährt jemand in den Laden.*
 
 ---
 
+### 6.7 Der Angebotsradar: aus der losen Brücke wird ein Vertrag
+
+Die Kapitel 6.2 bis 6.5 beschreiben die Brücke in ihrer ersten Form: Text
+hinaus, Antwort im Gespräch. Inzwischen gibt es daneben eine zweite,
+**festgezurrte** Form – `src/angebotsradar.js` und `src/ui/angebote.js`.
+
+Der Unterschied ist nicht die Technik, sondern die **Richtung der Antwort**:
+
+| | Klartext-Exporte (6.3) | Angebotsradar (6.7) |
+|---|---|---|
+| hinaus | Befund, offen formuliert | **Auftrag** mit Regeln, erlaubten Quellen und Ausgabevertrag |
+| zurück | im Gespräch, beim Menschen | **JSON, das wieder in die App geht** |
+| Frage | bewusst keine (6.4) | fest, weil das Ergebnis maschinell weiterverarbeitet wird |
+
+**Daraus folgt die Regel:** Was nur ein Mensch liest, darf offen bleiben. Was
+zurück in die App fließt, muss überprüfbar sein. Die App ruft weiterhin keine
+Händlerseite auf – sie erzeugt einen Text und nimmt später eine Datei
+entgegen.
+
+`alsAngebotsauftrag()` schreibt Aufgabe, Regeln, Märkte und ein vollständiges
+JSON-Beispiel in einen Block. Derselbe Text taugt damit für den einmaligen
+Zuruf **und** für eine wiederkehrende Hintergrundaufgabe – das ist Kapitel
+6.5, nur in Form gegossen.
+
+`pruefeAngebotsergebnis()` ist die eigentliche Arbeit. Ein Angebot wird nur
+angenommen, wenn **jedes** Feld trägt:
+
+- Preis endlich, größer als 0, höchstens 100 000; Währung genau `EUR`
+- Grundpreis maschinell lesbar (ab Vertragsfassung 2 verpflichtend)
+- `gueltigVon` ≤ `gueltigBis`, beide als Datum
+- `treffer` ist `genau` oder `alternative` – nichts dazwischen
+- **`quelle` ist HTTPS und liegt auf einer Erlaubnisliste offizieller
+  Händler-Hosts**
+- höchstens 200 Angebote, höchstens 256 KB Datei
+
+Die letzte Zeile ist die wichtigste. Sie macht aus dem Satz „eine erfundene
+Zahl auf einem Preiszettel ist schlimmer als eine fehlende" (6.6) eine
+Prüfung statt einer Bitte: Ein Preis ohne nachvollziehbare Herkunft kommt
+nicht in die App, egal wie plausibel er aussieht. Ein Agent, der eine Quelle
+erfindet, scheitert an der Erlaubnisliste – nicht am Wohlwollen des Lesers.
+
+Zwei weitere Entscheidungen lohnen die Erwähnung:
+
+**Angebote laufen von selbst ab.** `aktiveAngebote()` zeigt nur, was heute
+gültig ist. Niemand muss aufräumen, und nichts Abgelaufenes steht je im Weg.
+
+**Filialen werden zusammengefasst.** Dasselbe Angebot in drei Märkten ist
+eine Zeile, nicht drei. Markt und Quelle gehören deshalb absichtlich nicht
+zum Gruppenschlüssel – sie werden gesammelt und bleiben im aufgeklappten
+Detail vollständig nachvollziehbar.
+
+**Alte Ergebnisse bleiben lesbar.** Vertragsfassung 1 erlaubte beliebigen
+Grundpreistext. Solche gespeicherten Ergebnisse verschwinden nicht, nehmen
+aber am Preisvergleich nicht teil – abwerten statt wegwerfen.
+
+Und der Grundsatz aus Kapitel 3 gilt auch hier: Das mitgelieferte
+**Demo-Profil trägt erfundene Kaufgewohnheiten**. Der echte Wohnort gehört
+nicht in ein öffentliches Repository.
+
+---
+
 ## 7. Basis und Experte
 
 Der Schalter im Kopfbereich blendet Funktionen ein und aus. **Es ist keine
@@ -346,9 +407,11 @@ src/
   zustand.js               Zustand im Speicher, Durchschreiben nach IndexedDB
   db.js                    IndexedDB, sonst nichts
   logik.js                 reine Rechenregeln (getestet, ohne DOM)
+  angebotsradar.js         Auftrag hinaus, geprüftes Ergebnis herein (Kap. 6.7)
+  pwa-update.js            Service Worker und der vollständige Updateweg
   texte.js                 alle sichtbaren Sätze an einem Ort
   daten/katalog.json       476 Artikel in 18 Kategorien
-  ui/…                     die drei Bildschirme, Dialog, Teilen
+  ui/…                     die drei Bildschirme, Dialog, Teilen, Angebote
   styles/stamm/            Zeile für Zeile aus TourFuchs übernommen
   styles/farben.css        die Grenzschicht: was Foxi anders macht
 tools/                     Katalog bauen, Zeichen rastern, Server, Prüfstrecke
@@ -374,14 +437,33 @@ SoundFuchs es hält. **Sobald man eine Stamm-Datei bearbeitet, kann niemand
 mehr durch einen Vergleich feststellen, ob der Stamm noch der Stamm ist.**
 Alles Eigene steht in `src/styles/farben.css` und `foxi.css`.
 
-Der Unterschied zur Familie ist vier Werte groß:
+**Der Unterschied zur Familie ist ein einziger Wert groß** – und das ist
+selbst eine Entscheidung, die einmal anders getroffen war.
 
-| | TourFuchs / SoundFuchs | EinkaufsFuchs |
+Zuerst bekam EinkaufsFuchs einen eigenen grünen Leitton (`#3f9142`), passend
+zum Thema Lebensmittel. Das ist verworfen: Zwei fast gleiche Leittöne
+unterscheiden nicht, sie verwirren. Die Familie unterscheidet sich am
+**Funktionszeichen über dem Fuchskopf** – Standort-Pin bei TourFuchs,
+Schallwelle bei SoundFuchs, drei Zeilen einer Einkaufsliste bei Foxi –, nicht
+an einem Petrol, das ein bisschen grüner ist. `stamm/variables.css` ist
+deshalb die einzige Quelle für Leitton, Untergrund, Textfarben und Kontraste,
+und `farben.css` enthält heute genau eine zusätzliche Zeile:
+`--color-primary-soft` für die sehr helle Fläche einer schon vorgemerkten
+Kachel.
+
+Die Prüfstrecke hält das fest: Sie lässt den Lauf durchfallen, wenn
+`--color-primary`, `theme-color` und das Manifest nicht alle drei auf
+demselben Wert stehen.
+
+Die verworfene Fassung, zum Nachschlagen – damit sie niemand in einem halben
+Jahr erneut vorschlägt:
+
+| | Familie (gilt) | eigener Ton (verworfen) |
 |---|---|---|
-| `--color-primary` | `#0d9488` (3,74:1) | `#3f9142` (3,93:1) |
-| `--color-primary-dark` | `#0f766e` | `#2f6f34` (6,10:1) |
-| `--color-primary-light` | `#ccfbf1` | `#dff2df` |
-| `--color-bg` | `#f8fafc` | `#f7faf5` |
+| `--color-primary` | `#0d9488` | ~~`#3f9142`~~ |
+| `--color-primary-dark` | `#0f766e` | ~~`#2f6f34`~~ |
+| `--color-primary-light` | `#ccfbf1` | ~~`#dff2df`~~ |
+| `--color-bg` | `#f8fafc` | ~~`#f7faf5`~~ |
 
 Hausregel: gefüllte Flächen und Pillen tragen `--color-primary`, Text und
 Links tragen `--color-primary-dark`.
@@ -488,6 +570,28 @@ lässt den Lauf durchfallen.
 stammen aus der Schrift des Betriebssystems und sehen auf iOS anders aus;
 `navigator.share` mit Dateien verhält sich dort anders; und ob das lange
 Drücken sich gegen Safaris eigene Gesten durchsetzt, ist offen.
+
+---
+
+## 11a. Was dieses Dokument noch nicht beschreibt
+
+Ehrlicher Lückenvermerk, damit niemand die Beschreibung für vollständig
+hält. Im Code steht Folgendes, hier steht es noch nicht:
+
+- **Produktfotos an Listenzeilen** (`produktfoto*` in `zustand.js`,
+  `.karte-produktfoto`). Die Bilder liegen als `data:`-URL in IndexedDB –
+  deshalb erlaubt die CSP `img-src 'self' data:`, und deshalb verlässt auch
+  ein Foto das Gerät nicht.
+- **Das Produktgedächtnis** und die Verwaltung **persönlicher Märkte**
+  (`aktiveMaerkte`). Kapitel 6.7 erklärt, wofür die Märkte gebraucht werden,
+  aber nicht, wie man sie pflegt.
+- **Der Updateweg** der PWA (`src/pwa-update.js`, geprüft in
+  `tests/pwa.test.js`), der Version, Manifest, Icon-Adressen und den
+  Service-Worker-Zwischenspeicher zusammenhält.
+
+Wer eine davon anfasst, trägt sie bitte hier nach – und zwar mit der
+**Begründung**, nicht nur mit der Beschreibung. Das ist der Zweck dieses
+Dokuments; eine reine Funktionsliste steht schon in der README.
 
 ---
 
