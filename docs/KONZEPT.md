@@ -92,6 +92,25 @@ Kachel, beide Richtungen. Auf der Liste hakt ein Tipp ab.
 steht, soll nicht raten müssen. Die einzige Ausnahme ist langes Drücken
 (Kapitel 6.4), und die gibt es nur im Expertenmodus.
 
+**Die Karte bleibt ein ungeteiltes Ziel – auch als das Artikelblatt dazukam.**
+Der naheliegende Vorschlag lautet irgendwann: Der Kreis hakt ab, ein Tipp in
+die Mitte öffnet die Details. Das ist geprüft und verworfen, aus drei Gründen:
+
+1. Es verkleinert das häufigste Ziel der App von rund 330 × 62 px auf einen
+   Kreis von 28 px – ausgerechnet für die Handlung, die einhändig im Gehen
+   passiert, mit dem Wagen in der anderen Hand.
+2. Es macht Fehlgriffe schlimmer statt harmloser. Heute hakt ein Fehlgriff ab,
+   und die Rückmeldung trägt „Rückgängig": ein Tipp, erledigt. Mit geteilter
+   Karte öffnet er ein Blatt, das man erst wieder wegräumen muss.
+3. Es wäre eine Regel, die man **wissen** muss – und der Basismodus hat als
+   Kriterium, keine Funktion zu zeigen, die man erklären müsste.
+
+Das Artikelblatt hängt deshalb am Knopf **neben** der Zeile. Den gab es
+ohnehin schon; er klappte früher ein Formular unter der Zeile auf. Ein
+vorhandener Griff, der mehr kann, schlägt ein neu erfundenes geteiltes Ziel.
+Die Prüfstrecke hält beides fest: dass ein Tipp auf die Karte abhakt und kein
+Blatt öffnet, und dass der Knopf daneben das Blatt öffnet.
+
 ### 4.2 Automatische Kategorien
 
 Jeder Artikel trägt eine Kategorie; die Liste gruppiert danach, in der
@@ -411,7 +430,8 @@ src/
   pwa-update.js            Service Worker und der vollständige Updateweg
   texte.js                 alle sichtbaren Sätze an einem Ort
   daten/katalog.json       476 Artikel in 18 Kategorien
-  ui/…                     die drei Bildschirme, Dialog, Teilen, Angebote
+  ui/…                     die drei Bildschirme, Dialog, Teilen, Angebote,
+                           Artikelblatt
   styles/stamm/            Zeile für Zeile aus TourFuchs übernommen
   styles/farben.css        die Grenzschicht: was Foxi anders macht
 tools/                     Katalog bauen, Zeichen rastern, Server, Prüfstrecke
@@ -550,9 +570,9 @@ ohnehin nicht, weil er zu spät kommt.
 ## 11. Prüfen
 
 ```bash
-npm test                    # 87 Unit-Tests: Sortierung, Suche, Gruppierung,
+npm test                    # 93 Unit-Tests: Sortierung, Suche, Gruppierung,
                             # Exporte, Import, Datenintegrität
-node tools/durchlauf.mjs    # 59 Prüfungen im echten Browser (Chromium,
+node tools/durchlauf.mjs    # 68 Prüfungen im echten Browser (Chromium,
                             # iPhone-13-Profil) + die Bilder in docs/bilder/
 ```
 
@@ -578,13 +598,16 @@ Drücken sich gegen Safaris eigene Gesten durchsetzt, ist offen.
 Ehrlicher Lückenvermerk, damit niemand die Beschreibung für vollständig
 hält. Im Code steht Folgendes, hier steht es noch nicht:
 
-- **Produktfotos an Listenzeilen** (`produktfoto*` in `zustand.js`,
-  `.karte-produktfoto`). Die Bilder liegen als `data:`-URL in IndexedDB –
-  deshalb erlaubt die CSP `img-src 'self' data:`, und deshalb verlässt auch
-  ein Foto das Gerät nicht.
 - **Das Produktgedächtnis** und die Verwaltung **persönlicher Märkte**
   (`aktiveMaerkte`). Kapitel 6.7 erklärt, wofür die Märkte gebraucht werden,
   aber nicht, wie man sie pflegt.
+- **Die Mengenangabe** ist bis heute ein freies Textfeld. Für „800 g
+  Hähnchenbrustfilet" reicht das, gut ist es nicht. Zähler mit Einheiten
+  wären der falsche Reflex – sie verlangten für 476 Artikel je eine
+  Einheit, und ausgerechnet beim Fleisch wäre sie strittig (Gramm? Stück?
+  Packung?). Der naheliegende Weg wäre derselbe Trick wie beim lernenden
+  Katalog: die zuletzt benutzten Mengen je Artikel merken und als Chips
+  anbieten. Noch nicht gebaut.
 - **Der Updateweg** der PWA (`src/pwa-update.js`, geprüft in
   `tests/pwa.test.js`), der Version, Manifest, Icon-Adressen und den
   Service-Worker-Zwischenspeicher zusammenhält.

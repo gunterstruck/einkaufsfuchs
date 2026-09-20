@@ -175,22 +175,52 @@ await seite.screenshot({ path: join(bilder, '04-abgehakt.png') });
 await seite.locator('#modus-schalter .seg[data-modus="experte"]').tap();
 await seite.waitForSelector('.karte-stift');
 pruefe(await seite.locator('.karte-stift').first().isVisible(), 'Experte zeigt den dauerhaften Produktwunsch');
+/* Das Artikelblatt hängt am Knopf NEBEN der Zeile. Die Karte selbst bleibt
+   ungeteilt das Ziel zum Abhaken – geprüft ein paar Zeilen weiter unten. */
 await seite.locator('.karte-stift').first().tap();
-await seite.waitForSelector('.mengen-editor');
+await seite.waitForSelector('.dialog .mengen-editor');
+pruefe(await seite.locator('.dialog-titel').isVisible(),
+    'Der Knopf neben der Zeile öffnet das Artikelblatt');
+
+/* Abbrechen darf nichts ändern: Das Blatt zeigt an, es speichert nicht. */
+await seite.locator('.dialog input[type="text"]').fill('wird verworfen');
+await seite.locator('.dialog-abbruch').tap();
+await seite.waitForTimeout(200);
+pruefe(await seite.locator('.dialog').count() === 0 &&
+    await seite.locator('.karte-zusatz').count() === 0,
+    'Abbrechen schließt das Blatt, ohne etwas zu speichern');
+
+await seite.locator('.karte-stift').first().tap();
+await seite.waitForSelector('.dialog .mengen-editor');
 await seite.locator('.mengen-editor input[type="text"]').fill('2 Liter · die kleinen');
 const [fotowaehler] = await Promise.all([
     seite.waitForEvent('filechooser'),
     seite.locator('.produktfoto-aktionen button', { hasText: 'Foto hinzufügen' }).tap()
 ]);
 await fotowaehler.setFiles(join(wurzel, 'icons', 'favicon-64.png'));
-await seite.waitForSelector('.mengen-editor button', { hasText: 'Foto ändern' });
-await seite.locator('.mengen-editor button.primary').tap();
+await seite.waitForSelector('.produktfoto-aktionen button', { hasText: 'Foto ändern' });
+await seite.locator('.dialog-knoepfe button.primary').tap();
 await seite.waitForSelector('.karte-zusatz');
 pruefe((await seite.locator('.karte-zusatz').first().textContent())?.includes('2 Liter · die kleinen'),
     'Der Produktwunsch steht an der Zeile');
 pruefe(await seite.locator('.karte-produktfoto').count() === 1,
     'Das lokal komprimierte Produktfoto steht am Artikel');
 await seite.screenshot({ path: join(bilder, '05-experte.png') });
+
+/* Die wichtigste Zusicherung dieses Umbaus: Die Karte ist weiterhin EIN
+   ungeteiltes Ziel. Ein Tipp irgendwo darauf hakt ab und öffnet kein Blatt –
+   sonst wäre das häufigste Ziel der App um ein Vielfaches geschrumpft. */
+const offeneKarte = seite.locator('.listenkarte:not(.ist-erledigt)').first();
+const kartenKasten = await offeneKarte.boundingBox();
+const artikelVorher = await offeneKarte.locator('.karte-name').textContent();
+await seite.mouse.click(kartenKasten.x + 24, kartenKasten.y + kartenKasten.height / 2);
+await seite.waitForTimeout(250);
+pruefe(await seite.locator('.dialog').count() === 0,
+    'Ein Tipp auf die Karte öffnet kein Blatt');
+pruefe(await seite.locator(`.listenkarte.ist-erledigt .karte-name`, { hasText: artikelVorher }).count() === 1,
+    `Ein Tipp am linken Kartenrand hakt ab (${artikelVorher})`);
+await seite.locator('.listenkarte.ist-erledigt', { hasText: artikelVorher }).tap();
+await seite.waitForTimeout(200);
 
 /* Verlustfrei zurück: Basis blendet den Wunsch aus, löscht ihn aber nicht. */
 await seite.locator('#modus-schalter .seg[data-modus="basis"]').tap();
@@ -506,6 +536,44 @@ await seite.locator('#bereich-liste [data-artikel-id="butter"]').evaluate(
     (element) => element.scrollIntoView({ block: 'center' })
 );
 await seite.screenshot({ path: join(bilder, '14-liste-mit-angeboten.png') });
+
+/* ── Das Artikelblatt mit Angeboten ─────────────────────────────────────── */
+await seite.locator('#modus-schalter .seg[data-modus="experte"]').tap();
+await seite.waitForSelector('#bereich-liste [data-artikel-id="butter"] ~ .karte-stift');
+await seite.locator('#bereich-liste [data-artikel-id="butter"] ~ .karte-stift').tap();
+await seite.waitForSelector('.blatt-angebot');
+
+const blattText = await seite.locator('.dialog').textContent();
+pruefe(blattText?.includes('1,49 €') && blattText.includes('ALDI Süd'),
+    'Das Blatt führt Preis und Händler auf');
+pruefe(await seite.locator('.blatt-marke.ist-alternative').count() === 1,
+    'Ein ähnliches Produkt ist im Blatt eigens gekennzeichnet');
+pruefe(await seite.locator('.blatt-maerkte li').count() >= 1,
+    'Das Blatt nennt die Filialen, in denen das Angebot gilt');
+
+/* Jeder angezeigte Verweis muss HTTPS auf einem offiziellen Händler-Host
+   sein – dieselbe Erlaubnisliste, an der schon `pruefeAngebotsergebnis()`
+   misst. Ein manipuliertes Agentenergebnis darf das Blatt nicht in eine
+   Phishing-Fläche verwandeln. */
+const verweise = await seite.locator('.blatt-quelle').evaluateAll(
+    (elemente) => elemente.map((element) => element.href)
+);
+const erlaubt = ['aldi-nord.de', 'aldi-sued.de', 'rewe.de'];
+pruefe(verweise.length > 0 && verweise.every((adresse) => {
+    const ziel = new URL(adresse);
+    return ziel.protocol === 'https:' &&
+        erlaubt.some((host) => ziel.hostname === host || ziel.hostname.endsWith(`.${host}`));
+}), `Jeder Angebotsverweis zeigt per HTTPS auf einen offiziellen Händler (${verweise.join(', ')})`);
+pruefe(await seite.locator('.blatt-quelle').first().getAttribute('rel') === 'noopener noreferrer',
+    'Der Verweis verrät dem Händler nicht, woher der Klick kam');
+await seite.screenshot({ path: join(bilder, '15-artikelblatt.png') });
+
+await seite.locator('.dialog-abbruch').tap();
+await seite.waitForTimeout(200);
+/* Den Modus so hinterlassen, wie dieser Abschnitt ihn vorgefunden hat: Der
+   Lauf steht hier auf Experte, und das lange Drücken weiter unten gibt es
+   nur dort. Ein „aufgeräumtes" Zurückschalten ließ genau diese zwei
+   Prüfungen fallen. */
 
 /* Langes Drücken auf eine Kachel: nur dieser eine Artikelname. */
 await seite.locator('#tab-katalog').tap();

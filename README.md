@@ -4,7 +4,7 @@
 ![Kein Konto](https://img.shields.io/badge/Kein%20Konto-kein%20Login%2C%20kein%20Backend-0f766e)
 ![PWA](https://img.shields.io/badge/PWA-offlinef%C3%A4hig-purple)
 ![MIT License](https://img.shields.io/badge/License-MIT-yellow)
-![Version](https://img.shields.io/badge/Version-0.8.2-orange)
+![Version](https://img.shields.io/badge/Version-0.9.0-orange)
 
 **Tippen statt Tippen.**
 
@@ -129,7 +129,7 @@ sichtbare Komplexität.
 | | Basis (Standard) | Experte |
 |---|---|---|
 | Liste, Katalog, Abhaken | ✅ | ✅ |
-| Dauerhafter Produktwunsch und lokales Foto | – | ✅ |
+| Artikelblatt: Wunsch, Foto und Angebote je Artikel | – | ✅ |
 | Rezepte | – | ✅ |
 | Kategorie-Reihenfolge ziehen | – | ✅ |
 | Teilen, Export und Import | – | ✅ |
@@ -202,14 +202,14 @@ der Adresse erreichbar. Das ist kein Leck – dieselben Dateien liegen ohnehin
 ### Prüfen
 
 ```bash
-npm install && npm test          # 87 Unit-Tests (Logik, Daten, Import, PWA und Designsystem)
+npm install && npm test          # 93 Unit-Tests (Logik, Daten, Import, PWA und Designsystem)
 
 npm i --no-save playwright && npx playwright install chromium
-node tools/durchlauf.mjs         # 59 Prüfungen im echten Browser + Bilder
+node tools/durchlauf.mjs         # 68 Prüfungen im echten Browser + Bilder
 node tools/update-lauf.mjs       # echter Wechsel von alter auf neue PWA-Fassung
 ```
 
-Die Prüfstrecke (59 Prüfungen) fährt die Abnahmekriterien ab, die man mit
+Die Prüfstrecke (68 Prüfungen) fährt die Abnahmekriterien ab, die man mit
 Unit-Tests nicht erreicht: die Zwei-Tipp-Regel, zehn simulierte Einkäufe, den
 verlustfreien Moduswechsel, Rezepte, das Ziehen der Kategorien mit Zeiger und
 mit Tastatur, den Briefing-Export aus der echten Zwischenablage und einen
@@ -331,12 +331,18 @@ in den normalen Listenexport aufgenommen.
 
 ## Stand und was als Nächstes kommt
 
-**Gebaut (v0.8.2):** Version 1 ist inhaltlich vollständig – Basismodus,
+**Gebaut (v0.9.0):** Version 1 ist inhaltlich vollständig – Basismodus,
 lernender Katalog, Rezepte, Kategorie-Reihenfolge per Ziehen, Teilen als
 Datei mit Zusammenführung beim Import, Briefing-Export, Statistik,
 Offlinebetrieb, Installierbarkeit. Der geführte Angebotscheck verbindet Foxis
 lokalen Bedarf mit einem frei gewählten KI-Recherche-Assistenten; er ist keine
 automatische Händleranbindung.
+
+Seit 0.9.0 führt der Knopf neben einer Listenzeile ins **Artikelblatt**:
+Produktwunsch, Foto und alle Angebote zu diesem Artikel – mit Händler,
+Grundpreis, Filialen und Verweis auf die Händlerseite. Die Listenkarte selbst
+bleibt dabei ein ungeteiltes Ziel zum Abhaken; warum das so ist, steht in
+[docs/KONZEPT.md](docs/KONZEPT.md), Kapitel 4.1.
 
 **Als Nächstes:** auf echten Geräten fahren. Die Prüfstrecke läuft in
 Chromium; die Emoji stammen aber aus der Schrift des Betriebssystems, und

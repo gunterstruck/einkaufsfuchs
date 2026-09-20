@@ -39,6 +39,7 @@ grep -rn "\.style\.\|innerHTML\|<style\|style=" src/ index.html | grep -v "^src/
 | Angebotscheck | `src/angebotsradar.js` + `src/ui/angebote.js` |
 | Zustand + IndexedDB | `src/zustand.js`, `src/db.js` |
 | Die drei Bildschirme | `src/ui/liste.js`, `katalog.js`, `mehr.js` |
+| Artikelblatt (Details je Artikel) | `src/ui/artikelblatt.js` |
 
 Zwei Bezeichner dürfen **nie** umbenannt werden, auch wenn sie alt aussehen:
 `DB_NAME` in `db.js` (sonst verlieren alle Installationen ihre Daten) und
@@ -49,8 +50,8 @@ ab).
 
 ```bash
 npm run dev                 # http://localhost:8080 – ohne npm install
-npm install && npm test     # 87 Unit-Tests
-node tools/durchlauf.mjs    # 59 Prüfungen im echten Browser + Bilder
+npm install && npm test     # 93 Unit-Tests
+node tools/durchlauf.mjs    # 68 Prüfungen im echten Browser + Bilder
 ```
 
 Für die Prüfstrecke einmalig:
