@@ -278,6 +278,28 @@ const DE = {
         fertig: 'Fertig'
     },
 
+    /**
+     * Das Artikelblatt – aufgeklappt, was in der Zeile nur als Marke steht.
+     *
+     * Erreichbar über den Knopf neben der Zeile, nicht über die Zeile selbst:
+     * Die Karte bleibt ungeteilt das Ziel zum Abhaken. Siehe KONZEPT 4.1.
+     */
+    blatt: {
+        oeffnen: (name) => `${name} – Details und Angebote`,
+        angeboteTitel: (n) => (n === 1 ? '1 Angebot' : `${n} Angebote`),
+        keineAngebote: 'Zurzeit kein Angebot für diesen Artikel.',
+        /* „alternative" heißt: ein ähnliches Produkt, nicht das gesuchte.
+           Das muss dastehen – sonst behauptet die App ein Angebot, das es so
+           nicht gibt. */
+        alternative: 'Ähnliches Produkt',
+        guenstigster: 'günstigster Grundpreis',
+        gueltigBis: (datum) => `gültig bis ${datum}`,
+        filialen: (n) => (n === 1 ? '1 Filiale' : `${n} Filialen`),
+        beimHaendler: 'Beim Händler ansehen',
+        quelleBeschriftung: (haendler) => `Angebot bei ${haendler} ansehen (öffnet extern)`,
+        schliessen: 'Schließen'
+    },
+
     allgemein: {
         abbrechen: 'Abbrechen',
         schliessen: 'Schließen',

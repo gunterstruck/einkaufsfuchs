@@ -12,14 +12,12 @@ import { gruppiereListe, datumDeutsch } from '../logik.js';
 import { angeboteFuerArtikel, preisDeutsch } from '../angebotsradar.js';
 import {
     zustand, offeneEintraege, erledigteEintraege, abhaken, zurueckholen,
-    erledigteAufraeumen, istExperte, angebotsergebnis, produktfoto,
-    produktfotoSetzen, produktfotoLoeschen, produktwunschSetzen
+    erledigteAufraeumen, istExperte, angebotsergebnis, produktfoto
 } from '../zustand.js';
 import { melde, zeigeBereich } from './schale.js';
+import { zeigeArtikelblatt } from './artikelblatt.js';
 
 let behaelter = null;
-/** Kennung des Eintrags, dessen Menge/Notiz gerade offen ist (Experte). */
-let offenerEditor = null;
 
 /** Kompakter Angebotstext für die Listenkarte. Die Kaufbedingung gehört
  * zum ausgewählten günstigsten Treffer: Ohne sie würde ein „ab“-Preis etwa
@@ -202,107 +200,27 @@ function zeileZeichnen(eintrag, erledigt = false) {
 }
 
 /**
- * Produktwunsch und Foto (Experte).
+ * Der Griff zum Artikelblatt (Experte).
  *
- * Kein Dialog, keine zweite Ebene: ein Stift neben der Zeile, und das Feld
- * klappt darunter auf. Ein Dialog für zwei Textfelder wäre mehr Apparat als
- * Inhalt – und im Laden eine Ebene zu viel.
+ * Bis 0.8.2 klappte hier ein Formular unter der Zeile auf. Das reichte für
+ * zwei Textfelder, nicht mehr für das, was inzwischen zu einem Artikel
+ * gehört: Wunsch, Foto und die Angebote mitsamt Händler, Grundpreis,
+ * Filialen und Quelle. Der Knopf führt deshalb ins Artikelblatt.
+ *
+ * Was sich dabei ausdrücklich **nicht** ändert: Die Karte selbst bleibt ein
+ * einziges, ungeteiltes Ziel zum Abhaken. Ein geteiltes Ziel (Kreis hakt ab,
+ * Mitte öffnet) würde das häufigste Ziel der App um ein Vielfaches
+ * verkleinern – ausgerechnet für die Handlung, die einhändig im Gehen
+ * passiert.
  */
 function mengenTeil(eintrag) {
-    const stift = document.createElement('button');
-    stift.type = 'button';
-    stift.className = 'experte-nur karte-stift';
-    stift.textContent = eintrag.artikel.standardWunsch || produktfoto(eintrag.artikelId) ? '✏️' : '＋';
-    stift.setAttribute('aria-label', t('liste.stimmeMenge', eintrag.artikel.name));
-    stift.addEventListener('click', () => {
-        offenerEditor = offenerEditor === eintrag.artikelId ? null : eintrag.artikelId;
-        zeichneListe();
-    });
-
-    const teile = [stift];
-    if (offenerEditor === eintrag.artikelId) teile.push(editor(eintrag));
-    return teile;
-}
-
-function editor(eintrag) {
-    const form = document.createElement('form');
-    form.className = 'experte-nur mengen-editor';
-
-    const wunsch = document.createElement('input');
-    wunsch.type = 'text';
-    wunsch.maxLength = 180;
-    wunsch.value = eintrag.artikel.standardWunsch || [eintrag.menge, eintrag.notiz].filter(Boolean).join(' · ');
-    wunsch.placeholder = t('menge.wunschPlatzhalter');
-    wunsch.setAttribute('aria-label', t('menge.wunschBeschriftung'));
-    wunsch.enterKeyHint = 'done';
-
-    const fotoAktionen = document.createElement('div');
-    fotoAktionen.className = 'produktfoto-aktionen';
-    const fotoWahl = document.createElement('input');
-    fotoWahl.type = 'file'; fotoWahl.accept = 'image/*'; fotoWahl.hidden = true;
-    fotoWahl.setAttribute('capture', 'environment');
-    const fotoKnopf = document.createElement('button');
-    fotoKnopf.type = 'button';
-    fotoKnopf.textContent = produktfoto(eintrag.artikelId) ? t('menge.fotoAendern') : t('menge.fotoHinzufuegen');
-    fotoKnopf.addEventListener('click', () => fotoWahl.click());
-    fotoWahl.addEventListener('change', async () => {
-        const datei = fotoWahl.files?.[0];
-        if (!datei) return;
-        try {
-            /* Das Foto löst nach dem Speichern ein Neuzeichnen aus. Den bis
-               dahin getippten Wunsch vorher sichern, sonst wäre genau dieser
-               Text nach der Kamera-Rückkehr verschwunden. */
-            await produktwunschSetzen(eintrag.artikelId, wunsch.value);
-            const datenUrl = await bildKomprimieren(datei);
-            if (!await produktfotoSetzen(eintrag.artikelId, datenUrl)) throw new Error('zu gross');
-        } catch (fehler) {
-            console.warn('Produktfoto konnte nicht verarbeitet werden', fehler);
-            melde(t('menge.fotoFehler'));
-        }
-    });
-    fotoAktionen.append(fotoKnopf, fotoWahl);
-    if (produktfoto(eintrag.artikelId)) {
-        const loeschen = document.createElement('button');
-        loeschen.type = 'button'; loeschen.textContent = t('menge.fotoLoeschen');
-        loeschen.addEventListener('click', () => produktfotoLoeschen(eintrag.artikelId));
-        fotoAktionen.append(loeschen);
-    }
-
-    const fertig = document.createElement('button');
-    fertig.type = 'submit';
-    fertig.className = 'primary';
-    fertig.textContent = t('menge.fertig');
-
-    form.addEventListener('submit', async (ereignis) => {
-        ereignis.preventDefault();
-        offenerEditor = null;
-        await produktwunschSetzen(eintrag.artikelId, wunsch.value);
-    });
-
-    form.append(wunsch, fotoAktionen, fertig);
-    /* Direkt tippen können, ohne ein zweites Mal zu zielen. */
-    setTimeout(() => wunsch.focus(), 0);
-    return form;
-}
-
-function bildKomprimieren(datei) {
-    if (!datei.type.startsWith('image/') || datei.size > 12 * 1024 * 1024) return Promise.reject(new Error('bild'));
-    return new Promise((resolve, reject) => {
-        const bild = new Image();
-        bild.onload = () => {
-            const faktor = Math.min(1, 720 / Math.max(bild.width, bild.height));
-            const canvas = document.createElement('canvas');
-            canvas.width = Math.max(1, Math.round(bild.width * faktor));
-            canvas.height = Math.max(1, Math.round(bild.height * faktor));
-            canvas.getContext('2d').drawImage(bild, 0, 0, canvas.width, canvas.height);
-            resolve(canvas.toDataURL('image/jpeg', 0.78));
-        };
-        bild.onerror = reject;
-        const leser = new FileReader();
-        leser.onload = () => { bild.src = leser.result; };
-        leser.onerror = reject;
-        leser.readAsDataURL(datei);
-    });
+    const griff = document.createElement('button');
+    griff.type = 'button';
+    griff.className = 'experte-nur karte-stift';
+    griff.textContent = eintrag.artikel.standardWunsch || produktfoto(eintrag.artikelId) ? '✏️' : '＋';
+    griff.setAttribute('aria-label', t('blatt.oeffnen', eintrag.artikel.name));
+    griff.addEventListener('click', () => zeigeArtikelblatt(eintrag));
+    return [griff];
 }
 
 function erledigtBlock(erledigt) {
