@@ -75,7 +75,8 @@ async function transaktion(speicher, modus, arbeit) {
         tx.oncomplete = () => erfuellen(ergebnis);
         tx.onerror = () => ablehnen(tx.error);
         tx.onabort = () => ablehnen(tx.error || new Error('Transaktion abgebrochen'));
-        ergebnis = arbeit(tx);
+        try { ergebnis = arbeit(tx); }
+        catch (fehler) { tx.abort(); ablehnen(fehler); }
     });
 }
 
@@ -94,6 +95,19 @@ export async function alle(speicher) {
 export async function hole(speicher, schluessel) {
     const db = await oeffne();
     return alsVersprechen(db.transaction(speicher, 'readonly').objectStore(speicher).get(schluessel));
+}
+
+/** Mehrere Speicher werden gemeinsam bestätigt oder vollständig zurückgerollt. */
+export function atomar(sammlungen, loeschungen = {}) {
+    const namen = [...new Set([...Object.keys(sammlungen), ...Object.keys(loeschungen)])];
+    return transaktion(namen, 'readwrite', tx => {
+        for (const [name, werte] of Object.entries(sammlungen)) {
+            for (const wert of werte) tx.objectStore(name).put(wert);
+        }
+        for (const [name, ids] of Object.entries(loeschungen)) {
+            for (const id of ids) tx.objectStore(name).delete(id);
+        }
+    });
 }
 
 export function lege(speicher, wert) {
@@ -122,6 +136,30 @@ export function loescheDatenbank() {
         const anfrage = indexedDB.deleteDatabase(DB_NAME);
         anfrage.onsuccess = () => erfuellen();
         anfrage.onerror = () => ablehnen(anfrage.error);
-        anfrage.onblocked = () => erfuellen(); // andere Tabs schließen sie später
+        anfrage.onblocked = () => ablehnen(new Error('Datenbank durch ein anderes Fenster blockiert'));
+    });
+}
+
+/** Konsistentes Abbild aller Speicher in genau einer Lesetransaktion. */
+export async function sicherungLesen() {
+    const db = await oeffne();
+    return new Promise((resolve,reject) => {
+        const tx = db.transaction(Object.values(SPEICHER), 'readonly');
+        const daten = {};
+        for (const name of Object.values(SPEICHER)) {
+            const request = tx.objectStore(name).getAll();
+            request.onsuccess = () => { daten[name] = request.result; };
+        }
+        tx.oncomplete = () => resolve({ typ: 'foxi-sicherung', version: 1, erzeugt: new Date().toISOString(), daten });
+        tx.onabort = tx.onerror = () => reject(tx.error);
+    });
+}
+
+export function sicherungErsetzen(daten) {
+    return transaktion(Object.values(SPEICHER), 'readwrite', tx => {
+        for (const name of Object.values(SPEICHER)) {
+            const store = tx.objectStore(name); store.clear();
+            for (const eintrag of daten[name]) store.put(eintrag);
+        }
     });
 }

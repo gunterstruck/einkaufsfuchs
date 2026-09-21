@@ -273,6 +273,8 @@ export function pruefeAustauschdatei(daten) {
         (typeof daten.erzeugt !== 'string' || daten.erzeugt.length > AUSTAUSCHDATEI_GRENZEN.erzeugt)) {
         return { gueltig: false, grund: 'kaputt' };
     }
+    if (daten.teilmarke !== undefined && !gueltigeTeilmarke(daten.teilmarke)) return { gueltig: false, grund: 'kaputt' };
+    if (new Set(daten.artikel.map(a => a?.id)).size !== daten.artikel.length) return { gueltig: false, grund: 'kaputt' };
     const textfelder = ['kategorieId', 'kategorieName', 'icon', 'menge', 'notiz'];
     const artikelGueltig = daten.artikel.every((artikel) => {
         if (!artikel || typeof artikel !== 'object' || Array.isArray(artikel)) return false;
@@ -328,9 +330,64 @@ export function kaufStatistik(artikel, anzahl = 20) {
         .filter((a) => (a.letzteKaeufe || []).length > 0)
         .map((a) => ({
             artikel: a,
-            anzahl: a.letzteKaeufe.length,
+            anzahl: Number.isSafeInteger(a.zaehler) && a.zaehler >= 0 ? a.zaehler : a.letzteKaeufe.length,
             zuletzt: Math.max(...a.letzteKaeufe)
         }))
         .sort((x, y) => y.anzahl - x.anzahl || y.zuletzt - x.zuletzt)
         .slice(0, anzahl);
+}
+
+/** Konservative Rhythmus-Vorschläge: mindestens drei verschiedene Kauftage. */
+export function wiederkaufVorschlaege(artikel, liste, verschoben = {}, jetzt = Date.now()) {
+    const median = werte => { const s = [...werte].sort((a,b) => a-b); return s[Math.floor(s.length / 2)]; };
+    return artikel.flatMap(a => {
+        if (liste.get(a.id) && !liste.get(a.id).erledigt || (verschoben[a.id] || 0) > jetzt) return [];
+        const tage = [...new Set((a.letzteKaeufe || []).filter(z => Number.isFinite(z) && z <= jetzt)
+            .map(z => Math.floor(z / TAG_MS)))].sort((a,b) => a-b).slice(-8);
+        if (tage.length < 3) return [];
+        const abstaende = tage.slice(1).map((tag,i) => tag-tage[i]);
+        const rhythmus = median(abstaende);
+        const streuung = median(abstaende.map(n => Math.abs(n-rhythmus)));
+        const seit = Math.floor(jetzt / TAG_MS)-tage.at(-1);
+        if (rhythmus < 2 || rhythmus > 90 || streuung > rhythmus * 0.5 || seit < rhythmus * 0.8 || seit > rhythmus * 3) return [];
+        return [{ artikel: a, rhythmus, seit, faelligkeit: seit/rhythmus }];
+    }).sort((a,b) => b.faelligkeit-a.faelligkeit || a.artikel.name.localeCompare(b.artikel.name, 'de')).slice(0,5);
+}
+
+/** Erst drei abgeschlossene Einkäufe mit je mindestens drei Kategorien ergeben einen Vorschlag. */
+export function gelernterLaufweg(einkaeufe, kategorien) {
+    const gueltige = (einkaeufe || []).filter(e => new Set(e.kategorien).size >= 3).slice(-8);
+    if (gueltige.length < 3) return null;
+    const werte = new Map();
+    for (const einkauf of gueltige) {
+        const ids = [...new Set(einkauf.kategorien)];
+        ids.forEach((id,i) => { if (!werte.has(id)) werte.set(id, []); werte.get(id).push(i/(ids.length-1)); });
+    }
+    const gelernt = kategorien.filter(k => (werte.get(k.id)?.length || 0) >= 3);
+    if (gelernt.length < 3) return null;
+    const mittel = id => werte.get(id).reduce((a,b) => a+b,0)/werte.get(id).length;
+    gelernt.sort((a,b) => mittel(a.id)-mittel(b.id) || a.position-b.position);
+    // Ungesehene Kategorien behalten ihren relativen Platz am Ende.
+    return [...gelernt.map(k => k.id), ...kategorien.filter(k => !gelernt.includes(k)).map(k => k.id)];
+}
+
+export function gueltigeTeilmarke(marke) {
+    return !!marke && typeof marke === 'object' && /^[a-zA-Z0-9-]{8,80}$/.test(marke.serie) &&
+        Number.isSafeInteger(marke.revision) && marke.revision > 0;
+}
+
+/** Vergleich zum letzten bewusst übernommenen Stand desselben Absenders. */
+export function vergleicheListenstand(fremdeArtikel, basisArtikel, eigeneListe) {
+    const fremd = new Map(fremdeArtikel.map(a => [a.id,a]));
+    const basis = new Map(basisArtikel.map(a => [a.id,a]));
+    const wert = a => a ? JSON.stringify([a.menge || '', a.notiz || '', Boolean(a.erledigt)]) : null;
+    const aenderungen = [];
+    for (const id of new Set([...basis.keys(), ...fremd.keys()])) {
+        const vorher = basis.get(id), nachher = fremd.get(id), lokal = eigeneListe.get(id);
+        if (wert(vorher) === wert(nachher) || wert(lokal) === wert(nachher)) continue;
+        const konflikt = wert(lokal) !== wert(vorher);
+        aenderungen.push({ id, vorher, nachher, lokal, konflikt,
+            art: !nachher ? 'entfernt' : !vorher ? 'neu' : 'geaendert' });
+    }
+    return aenderungen;
 }

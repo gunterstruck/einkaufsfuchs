@@ -379,14 +379,10 @@ angenommen, wenn **jedes** Feld trägt:
 - `gueltigVon` ≤ `gueltigBis`, beide als Datum
 - `treffer` ist `genau` oder `alternative` – nichts dazwischen
 - **`quelle` ist HTTPS und liegt auf einer Erlaubnisliste offizieller
-  Händler-Hosts**
+  Händler-Hosts** oder ist für diesen eigenen Laden lokal ausdrücklich hinterlegt
 - höchstens 200 Angebote, höchstens 256 KB Datei
 
-Die letzte Zeile ist die wichtigste. Sie macht aus dem Satz „eine erfundene
-Zahl auf einem Preiszettel ist schlimmer als eine fehlende" (6.6) eine
-Prüfung statt einer Bitte: Ein Preis ohne nachvollziehbare Herkunft kommt
-nicht in die App, egal wie plausibel er aussieht. Ein Agent, der eine Quelle
-erfindet, scheitert an der Erlaubnisliste – nicht am Wohlwollen des Lesers.
+Diese Prüfung begrenzt fremde Eingaben und unerwünschte Quellen. Sie bestätigt jedoch nicht, dass ein Preis auf einer Händlerseite steht oder die Filiale ihn tatsächlich anbietet. Auch ein erfundener Preis mit formal erlaubtem Link kann die Formatprüfung bestehen. Die konkrete Quelle bleibt deshalb sichtbar.
 
 Zwei weitere Entscheidungen lohnen die Erwähnung:
 
@@ -417,22 +413,22 @@ sichtbare Komplexität.
 | | Basis (Standard) | Experte |
 |---|---|---|
 | Liste, Katalog, Abhaken | ✅ | ✅ |
-| Mengen und Notizen | – | ✅ |
+| Mengen und Notizen lesen | ✅ | ✅ |
+| Produktwunsch bearbeiten | – | ✅ |
 | Rezepte | – | ✅ |
 | Kategorie-Reihenfolge ziehen | – | ✅ |
-| Teilen, Export, Import | – | ✅ |
-| Stammartikel-Export, Ort | – | ✅ |
+| Teilen, Export, Import und Vollsicherung | ✅ | ✅ |
+| Stammartikel-Export | ✅ | ✅ |
+| Ort bearbeiten | – | ✅ |
 | Statistik | – | ✅ |
 
 Der Wechsel ist **verlustfrei, und zwar wörtlich**: Er berührt genau einen
 Wert in den Einstellungen und setzt eine Klasse auf `<body>`. Was zur Tiefe
 gehört, trägt `.experte-nur` und wird ausgeblendet, nicht gelöscht. Eine im
-Expertenmodus erfasste Menge steht in der Datenbank weiter; Basis zeigt sie
-nur nicht. Die Prüfstrecke fährt den Rückweg mit und vergleicht.
+Expertenmodus erfasste Menge steht in der Datenbank weiter; Basis zeigt sie ebenfalls. Die Prüfstrecke fährt den Rückweg mit und vergleicht.
 
 Prüfkriterium für Basis: **keine einzige Funktion, die man erklären müsste.**
-Im Bildschirm „Mehr" heißt das konkret zwei Karten – „Über EinkaufsFuchs"
-und „Deine Daten".
+Im Bildschirm „Mehr“ stehen die Grundkarten einschließlich Teilen und dem optional nutzbaren Angebotscheck.
 
 ---
 
@@ -828,7 +824,7 @@ Tastatur öffnet.
 ## 11. Prüfen
 
 ```bash
-npm test                    # 191 Unit-Tests: Sortierung, Suche, Gruppierung,
+npm test                    # 214 Unit-Tests: Sortierung, Suche, Gruppierung,
                             # Exporte, Import, Datenintegrität
 node tools/durchlauf.mjs    # 99 Prüfungen im echten Browser (Chromium,
                             # iPhone-13-Profil) + die Bilder in docs/bilder/
@@ -879,10 +875,8 @@ Dokuments; eine reine Funktionsliste steht schon in der README.
 
 ## 12. Was als Nächstes käme
 
-- **Rhythmus:** aus `letzteKaeufe` die Kaufabstände mitteln und Artikel von
-  selbst vorschlagen. Die Daten liegen längst da.
-- **Ladenzuordnung:** nach dem Abhaken einmal „Wo warst du?" mit den letzten
-  drei Läden als Kacheln. Kein GPS, keine Berechtigung.
+- **Rhythmus:** seit 0.13.0 umgesetzt, siehe Kapitel 14.
+- **Ladenzuordnung:** seit 0.13.0 freiwillig vor dem Einkauf, siehe Kapitel 14.
 - **Preise:** optionales Zahlenfeld beim Abhaken, daraus ein simpler
   Preisverlauf.
 - **Karte mit Geschäften:** Supermarkt-Standorte aus OpenStreetMap über die
@@ -904,3 +898,24 @@ drei Sätzen:
    gefunden, die kein Nachdenken gefunden hätte.
 3. **Texte gehören nach `src/texte.js`**, Farben nach `farben.css`, und
    `src/styles/stamm/` wird nicht angefasst.
+
+
+## 14. Alltag und Zuverlässigkeit (0.13.0)
+
+Die erste Befüllung schreibt Kategorien, Artikel, Rezepte und Abschlussmarkierung gemeinsam in einer IndexedDB-Transaktion. Fehlt die Markierung nach einem früheren Abbruch, werden nur fehlende Datensätze ergänzt. Vorhandene Haushaltsdaten bleiben bestehen. Eine synchron scheiternde Schreibarbeit bricht die ganze Transaktion ab.
+
+Updates dürfen keinen geöffneten Editor verwerfen. Deshalb verwendet der Worker kein skipWaiting und navigiert keine Fenster. Der neue Cache wird vorbereitet, die Aktivierung wartet auf das Schließen aller alten Fenster. Auch die Startseite kommt aus dem aktiven Cache, damit neue HTML-Dateien nicht mit alten Modulen vermischt werden.
+
+Wiederkauf-Vorschläge verwenden den Median der letzten Kaufabstände und eine Streuungsgrenze. Mindestens drei verschiedene Kauftage, zwei bis 90 Tage Rhythmus und ein höchstens dreifach überfälliger letzter Kauf begrenzen Fehlalarme. Offene Artikel und verschobene Vorschläge erscheinen nicht. Maximal fünf Vorschläge halten die Liste übersichtlich.
+
+Laufwege entstehen nur in freiwillig gestarteten und beendeten Einkäufen. Rückgängig entfernt den zugehörigen Schritt. Die letzten acht Einkäufe pro Laden liefern normalisierte Kategoriepositionen; mindestens drei Beobachtungen je Kategorie sind nötig. Erst ein bestätigter Vorschlag ändert die Sortierung in diesem Laden. Die allgemeine Kategorie-Reihenfolge bleibt bestehen.
+
+Beim Austausch tragen neue Dateien teilmarke und neue QR-Nutzlasten x mit Serie und Revision. Der Inhalt und die Revision bleiben bei unveränderter Liste gleich. Ein Empfänger merkt sich höchstens 20 Absenderstände. Gegen den letzten übernommenen Stand werden Änderungen ermittelt und mit der eigenen aktuellen Liste verglichen. Nur angehakte Änderungen werden übernommen, Konflikte und Löschungen sind zunächst abgewählt. Nicht gesendete eigene Artikel bleiben unberührt. Eine leere Folgeliste kann Löschungen vorschlagen. Ohne Teilmarke gilt der bisherige Import. Dies ist keine automatische Synchronisierung und keine Authentifizierung des Absenders.
+
+Die Händlerauswahl umfasst acht verbreitete Ketten und Sonstiger Laden. Für eigene Läden darf ausschließlich eine lokal ausdrücklich hinterlegte HTTPS-Quelle als zusätzliche Quelle dienen; ein eingelesenes Ergebnis kann sich keine Erlaubnis selbst geben. Händler und Filialbezeichnung werden wortgleich aus dem Rechercheprofil übernommen. Die Prüfung bestätigt Format und erlaubten Host, nicht die Wahrheit eines Preises. Name, Adresse und Website werden weiterhin nur bewusst per Rechercheauftrag weitergegeben.
+
+Vollsicherungen sind vom Listenaustausch getrennt. Sie enthalten auch Fotos, Kaufhistorie und alle Einstellungen, werden streng geprüft und ersetzen alle Speicher atomar. Die private, unverschlüsselte Datei ist bewusst als solche bezeichnet. Beim Wiederherstellen wird die eigene Teilmarke zurückgesetzt, damit kopierte Geräte keine gleichen Revisionszähler weiterführen.
+
+Zurückgestellt: ein optionaler Google-Maps-Link oder eine andere Kartenauswahl zur Suche eines Ladenstandorts. Keine Karte und kein Standortzugriff sind Teil von 0.13.0.
+
+Prüfung: npm test; node tools/durchlauf.mjs; node tools/alltag-lauf.mjs; node tools/update-lauf.mjs. Die Browserläufe prüfen einschließlich JavaScript-/CSP-Fehlern, externen Anfragen, zwei unabhängigen Geräten, Offline-Start und Wiederherstellung.

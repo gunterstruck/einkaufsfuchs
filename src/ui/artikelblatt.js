@@ -21,6 +21,7 @@ import {
     angebotsergebnis, produktfoto, produktfotoSetzen, produktfotoLoeschen,
     produktwunschSetzen
 } from '../zustand.js';
+import { maerkte } from '../zustand.js';
 import { zeigeDialog, schliesseDialog } from './dialog.js';
 import { melde } from './schale.js';
 
@@ -130,7 +131,7 @@ function angebotsKarte(angebot) {
 }
 
 function angebotsTeil(artikelId) {
-    const angebote = angeboteFuerArtikel(angebotsergebnis(), artikelId);
+    const angebote = angeboteFuerArtikel(angebotsergebnis(), artikelId, new Date(), maerkte());
     const block = document.createElement('section');
     block.className = 'blatt-angebote';
 

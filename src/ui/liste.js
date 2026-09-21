@@ -7,6 +7,8 @@
  * Kontextmenü. Wer im Laden steht, soll nicht raten müssen.
  */
 
+import { assistentZeichnen } from './assistent.js';
+import { listenKategorien } from '../zustand.js';
 import { t } from '../texte.js';
 import { gruppiereListe, datumDeutsch } from '../logik.js';
 import { angeboteFuerArtikel, preisDeutsch } from '../angebotsradar.js';
@@ -14,6 +16,7 @@ import {
     zustand, offeneEintraege, erledigteEintraege, abhaken, zurueckholen,
     erledigteAufraeumen, istExperte, angebotsergebnis, produktfoto
 } from '../zustand.js';
+import { maerkte } from '../zustand.js';
 import { melde, zeigeBereich } from './schale.js';
 import { zeigeArtikelblatt } from './artikelblatt.js';
 
@@ -61,6 +64,7 @@ export function listeVerdrahten() {
 export function zeichneListe() {
     if (!behaelter) return;
     behaelter.textContent = '';
+    behaelter.append(assistentZeichnen());
 
     const offen = offeneEintraege();
     const erledigt = erledigteEintraege();
@@ -70,7 +74,7 @@ export function zeichneListe() {
         return;
     }
 
-    const gruppen = gruppiereListe(offen, zustand.artikel, zustand.kategorien);
+    const gruppen = gruppiereListe(offen, zustand.artikel, listenKategorien());
     for (const gruppe of gruppen) behaelter.append(gruppeZeichnen(gruppe));
 
     if (erledigt.length > 0) behaelter.append(erledigtBlock(erledigt));
@@ -143,10 +147,9 @@ function zeileZeichnen(eintrag, erledigt = false) {
     name.textContent = eintrag.artikel.name;
     text.append(name);
 
-    /* Produktwunsch und Foto stehen nur im Expertenmodus im Bild. In der
-       Datenbank bleiben sie – wer zurück auf Basis schaltet, verliert nichts. */
+    /* Kaufrelevante Angaben bleiben auch im Basismodus lesbar. */
     const zusatz = eintrag.artikel.standardWunsch || [eintrag.menge, eintrag.notiz].filter(Boolean).join(' · ');
-    if (zusatz && istExperte()) {
+    if (zusatz) {
         const zeileZusatz = document.createElement('span');
         zeileZusatz.className = 'karte-zusatz';
         zeileZusatz.textContent = zusatz;
@@ -158,7 +161,7 @@ function zeileZeichnen(eintrag, erledigt = false) {
        Filialen sind hier bereits zusammengefasst. */
     let angebotHinweis = '';
     if (!erledigt) {
-        const angebote = angeboteFuerArtikel(angebotsergebnis(), eintrag.artikelId);
+        const angebote = angeboteFuerArtikel(angebotsergebnis(), eintrag.artikelId, new Date(), maerkte());
         angebotHinweis = angebotHinweisFuerListe(angebote);
         if (angebotHinweis) {
             const marke = document.createElement('span');

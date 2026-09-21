@@ -20,6 +20,7 @@ import {
     angebotsergebnisSetzen,
     angebotseinfuehrungAbschliessen
 } from '../zustand.js';
+import { maerkte } from '../zustand.js';
 import { t } from '../texte.js';
 import { zeigeDialog } from './dialog.js';
 import { melde } from './schale.js';
@@ -64,13 +65,13 @@ export async function rechercheAuftragKopieren() {
 }
 
 async function ergebnisUebernehmen(daten) {
-    if (!pruefeAngebotsergebnis(daten).gueltig) {
+    if (!pruefeAngebotsergebnis(daten, maerkte()).gueltig) {
         melde(t('angebote.ergebnisUngueltig'));
         return false;
     }
     await angebotsergebnisSetzen(daten);
     await angebotseinfuehrungAbschliessen();
-    melde(t('angebote.ergebnisUebernommen', gruppiereAngebote(aktiveAngebote(daten)).length));
+    melde(t('angebote.ergebnisUebernommen', gruppiereAngebote(aktiveAngebote(daten, new Date(), maerkte())).length));
     return true;
 }
 
@@ -126,7 +127,7 @@ export function ergebnisdateiEinlesen() {
 }
 
 export function aktuelleAngebote() {
-    return aktiveAngebote(angebotsergebnis());
+    return aktiveAngebote(angebotsergebnis(), new Date(), maerkte());
 }
 
 function absatz(text, klasse = '') {
