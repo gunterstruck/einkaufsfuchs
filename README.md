@@ -210,8 +210,8 @@ zeigen dieselbe App; Einfachheit gilt auf jeder Bildschirmgröße.
 ## Loslegen
 
 ```bash
-git clone https://github.com/gunterstruck/foxi.git
-cd foxi
+git clone https://github.com/gunterstruck/einkaufsfuchs.git
+cd einkaufsfuchs
 npm run dev        # http://localhost:8080
 ```
 
@@ -226,7 +226,7 @@ kopieren. Kein Node, kein Build, kein Container.
 ### Veröffentlichen auf Vercel
 
 Das Repository ist fertig eingerichtet – `vercel.json` liegt bei. In Vercel
-genügt **Add New… → Project → `gunterstruck/foxi` importieren → Deploy**.
+genügt **Add New… → Project → `gunterstruck/einkaufsfuchs` importieren → Deploy**.
 Nichts umstellen: Framework `Other`, Install- und Build-Command leer, Output
 Directory `.`; genau das steht in `vercel.json` und wird von dort gelesen.
 
