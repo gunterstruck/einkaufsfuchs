@@ -548,6 +548,42 @@ für dieselbe Handlung.
 schickt kein Browser zu irgendeinem Server. Was über das Netz geht, ist die
 App selbst – und auch die nur, wenn sie dort noch nicht installiert ist.
 
+### Derselbe Inhalt als Link – und die Falle dabei
+
+Bildschirm-an-Kamera setzt denselben Raum voraus; genau dann braucht man es
+am wenigsten. Der eigentliche Fall ist: Einer ist zu Hause, der andere im
+Laden. Dafür schickt „Als Link senden" **dieselbe Adresse** in eine
+Nachricht – die Liste steht ja im Link.
+
+Dabei lauert eine Falle, die den ganzen Weg stumm entwertet: **Ein
+angetippter Link in einer Nachricht öffnet den eingebauten Browser des
+Messengers.** Der hat seinen eigenen Speicher. Dort übernommen, ist die Liste
+in der Foxi auf dem Startbildschirm **nie angekommen** – sie war drei
+Sekunden lang zu sehen und ist dann weg. Dasselbe gilt auf iOS für den
+QR-Code, weil die Kamera Safari öffnet und nicht die installierte App.
+
+Deshalb gibt es die Gegenrichtung von Hand: **„Link einfügen"** neben „Datei
+einlesen". Der Ablauf unterwegs ist damit: Link kopieren → die **eigene**
+Foxi öffnen → einfügen → derselbe Zusammenführungs-Dialog. Der Satz dazu
+steht im Sendedialog, damit ihn der Absender weitergeben kann.
+
+Zwei Dinge sind beim Einfügen Absicht:
+
+- **Der Ursprung im Link ist egal.** Ein Link von einer anderen Adresse
+  derselben App – nach einem Umzug, aus einer alten Nachricht – trägt
+  dieselben Daten hinter der Raute. Geprüft wird der Inhalt, nicht die
+  Herkunft.
+- **Zuerst die Zwischenablage, dann die Frage.** Geht `readText()` nicht
+  (Safari ohne Geste, Firefox, verweigerte Berechtigung), erscheint ein Feld
+  statt einer Fehlermeldung.
+
+Und zur Einordnung, weil Foxi ein Versprechen gibt: Die Liste steht **im**
+Link; wer die Nachricht hat, hat die Liste. Das ist dieselbe Kategorie wie
+die Datei, die Foxi längst per Messenger teilt – ein Mensch entscheidet und
+schickt. Immerhin: Was ein Messenger für die Linkvorschau holt, ist nur die
+App-Adresse. Den Teil hinter der Raute bekommt auch dieser Abruf nie zu
+sehen.
+
 ### Was nicht mitfährt
 
 - **Fotos.** Ein Produktfoto ist bis 900 KB groß, ein QR-Code fasst 2,9 KB.
@@ -794,7 +830,7 @@ Tastatur öffnet.
 ```bash
 npm test                    # 191 Unit-Tests: Sortierung, Suche, Gruppierung,
                             # Exporte, Import, Datenintegrität
-node tools/durchlauf.mjs    # 93 Prüfungen im echten Browser (Chromium,
+node tools/durchlauf.mjs    # 99 Prüfungen im echten Browser (Chromium,
                             # iPhone-13-Profil) + die Bilder in docs/bilder/
 ```
 

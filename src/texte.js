@@ -166,12 +166,27 @@ const DE = {
      * weitergibt, soll wissen, was er weitergibt – und was nicht.
      */
     qr: {
-        knopf: 'Liste als QR-Code zeigen',
-        titel: 'Liste als QR-Code',
+        knopf: 'Liste an ein anderes Gerät',
+        titel: 'Liste an ein anderes Gerät',
         erklaerung:
-            'Halte die Kamera des anderen Geräts darauf – die gewöhnliche Kamera-App genügt. ' +
-            'Sie öffnet Foxi mit dieser Liste. Es wird nichts verschickt und nichts gespeichert.',
+            'Im selben Raum: Halte die Kamera des anderen Geräts darauf – die gewöhnliche ' +
+            'Kamera-App genügt. Unterwegs: Schick denselben Inhalt als Link.',
         ohneFotos: 'Fotos, Kaufhistorie und dein Ort fahren nicht mit.',
+
+        /* Der Link ist dieselbe Adresse, die im Bild steckt. */
+        linkSenden: 'Als Link senden',
+        linkKopiert: 'Link in der Zwischenablage',
+        /* Der wichtigste Satz auf dieser Seite: Ein angetippter Link in einer
+           Nachricht öffnet den eingebauten Browser des Messengers, und der
+           hat seinen eigenen Speicher. Dort übernommen, ist die Liste in der
+           richtigen Foxi nicht angekommen. */
+        linkGegenseite: 'Am anderen Ende: Link kopieren, die eigene Foxi öffnen, „Link einfügen".',
+        linkEinfuegen: 'Link einfügen',
+        linkTitel: 'Link einfügen',
+        linkPlatzhalter: 'https://…#lz=…',
+        linkHinweis: 'Kopiere den Link aus der Nachricht und füge ihn hier ein.',
+        linkUebernehmen: 'Liste lesen',
+        linkKeineListe: 'In diesem Link steckt keine EinkaufsFuchs-Liste.',
         artikelZahl: (n) => (n === 1 ? '1 Artikel' : `${n} Artikel`),
         bildBeschriftung: (n) =>
             n === 1 ? 'QR-Code mit 1 Artikel' : `QR-Code mit ${n} Artikeln`,

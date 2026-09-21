@@ -19,7 +19,8 @@ import {
 import { melde, zeigeBereich } from './schale.js';
 import { zeigeDialog, dialogFeld, schliesseDialog } from './dialog.js';
 import {
-    teileAlsDatei, kopiereListeAlsText, kopiereStammartikel, dateiEinlesen, zeigeQrCode
+    teileAlsDatei, kopiereListeAlsText, kopiereStammartikel, dateiEinlesen,
+    zeigeQrCode, linkEinlesen
 } from './teilen.js';
 import {
     aktuelleAngebote, rechercheAuftragKopieren, ergebnisEinfuegen,
@@ -330,6 +331,7 @@ function teilenKarte() {
         knopf(t('teilen.alsDatei'), teileAlsDatei),
         knopf(t('teilen.alsText'), kopiereListeAlsText),
         knopf(t('teilen.stammartikel'), kopiereStammartikel),
+        knopf(t('qr.linkEinfuegen'), linkEinlesen),
         knopf(t('teilen.importieren'), dateiEinlesen)
     ));
     abschnitt.append(absatz(t('teilen.langDrueckenHinweis'), 'muted small'));
