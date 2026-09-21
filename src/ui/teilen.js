@@ -12,6 +12,8 @@
  * Nichts davon verlässt das Gerät, solange der Mensch es nicht schickt.
  */
 
+import { sicherungLesen, sicherungErsetzen } from '../db.js';
+import { pruefeSicherung } from '../sicherung.js';
 import { t } from '../texte.js';
 import {
     alsAustauschdatei, alsKlartext, alsStammartikelText, kaufStatistik,
@@ -23,6 +25,8 @@ import {
     pruefeQrListe, alsImportartikel, QR_SCHLUESSEL, QR_SCHLUESSEL_GEPACKT
 } from '../qrliste.js';
 import { qrErzeugen, qrZeichnen } from '../qrcode.js';
+import { neueTeilmarke, listenstandMerken, vonListeNehmen } from '../zustand.js';
+import { vergleicheListenstand } from '../logik.js';
 import { zustand, offeneEintraege, importAnwenden, alleArtikel, ort } from '../zustand.js';
 import { melde } from './schale.js';
 import { zeigeDialog, dialogZeile, dialogFeld } from './dialog.js';
@@ -42,9 +46,10 @@ export function listeAlsText() {
 
 export async function teileAlsDatei() {
     const eintraege = offeneEintraege();
-    if (eintraege.length === 0) { melde(t('teilen.leerNichtsZuTeilen')); return; }
+    if (eintraege.length === 0 && !zustand.einstellungen.teilmarke) { melde(t('teilen.leerNichtsZuTeilen')); return; }
 
     const daten = alsAustauschdatei(eintraege, zustand.artikel, kategorienNachId());
+    daten.teilmarke = await neueTeilmarke();
     const text = JSON.stringify(daten, null, 2);
     const dateiname = t('teilen.dateiName', datumFuerDateiname());
     const datei = new File([text], dateiname, { type: 'application/json' });
@@ -170,13 +175,15 @@ export async function kopiereText(text, erfolgsmeldung, dialogTitel = t('teilen.
  */
 export async function aktuelleQrAdresse() {
     const eintraege = offeneEintraege();
-    if (eintraege.length === 0) return '';
-    return qrAdresse(alsQrNutzlast(eintraege, zustand.artikel), eigenerUrsprung());
+    if (eintraege.length === 0 && !zustand.einstellungen.teilmarke) return '';
+    const daten = alsQrNutzlast(eintraege, zustand.artikel);
+    daten.x = await neueTeilmarke();
+    return qrAdresse(daten, eigenerUrsprung());
 }
 
 export async function zeigeQrCode() {
     const eintraege = offeneEintraege();
-    if (eintraege.length === 0) { melde(t('teilen.leerNichtsZuTeilen')); return; }
+    if (eintraege.length === 0 && !zustand.einstellungen.teilmarke) { melde(t('teilen.leerNichtsZuTeilen')); return; }
 
     let code;
     const adresse = await aktuelleQrAdresse();
@@ -329,7 +336,8 @@ async function anteilUebernehmen(anteil) {
     zeigeZusammenfuehrung({
         typ: DATEI_TYP,
         version: DATEI_VERSION,
-        artikel: alsImportartikel(pruefung.daten)
+        artikel: alsImportartikel(pruefung.daten),
+        ...(pruefung.daten.x ? { teilmarke: pruefung.daten.x } : {})
     });
     return true;
 }
@@ -395,6 +403,7 @@ export function zeigeZusammenfuehrung(daten) {
         return;
     }
 
+    if (daten.teilmarke) { zeigeStandvergleich(daten); return; }
     const { neu, doppelt, abweichend } = vergleicheImport(daten.artikel, zustand.liste);
     const unbekannt = daten.artikel.filter((a) => !zustand.artikel.has(a.id));
 
@@ -430,4 +439,77 @@ export function zeigeZusammenfuehrung(daten) {
 async function uebernehmen(fremdeArtikel, modus) {
     const anzahl = await importAnwenden(fremdeArtikel, modus);
     melde(t('zusammenfuehren.uebernommen', anzahl));
+}
+
+
+function zeigeStandvergleich(daten) {
+    const marke = daten.teilmarke;
+    const bisher = zustand.einstellungen.empfangeneStaende?.[marke.serie];
+    if (marke.serie === zustand.einstellungen.teilmarke?.serie) { melde(t('austausch.eigenerStand')); return; }
+    if (bisher && marke.revision <= bisher.revision) { melde(t('austausch.alterStand')); return; }
+    const aenderungen = structuredClone(vergleicheListenstand(daten.artikel, bisher?.artikel || [], zustand.liste));
+    const koerper = [dialogZeile(t(bisher ? 'austausch.vergleich' : 'austausch.ersterStand'), 'muted')];
+    const auswahl = [];
+    const beschreibung = a => [a?.menge, a?.notiz].filter(Boolean).join(' · ') || '–';
+    for (const a of aenderungen) {
+        const label = document.createElement('label'); label.className = 'stand-aenderung';
+        const haken = document.createElement('input'); haken.type = 'checkbox';
+        haken.checked = !a.konflikt && a.art !== 'entfernt';
+        const name = a.nachher?.name || a.vorher?.name || a.id;
+        const titel = t('austausch.' + a.art, name);
+        label.append(haken, document.createTextNode(titel));
+        koerper.push(label);
+        if (a.konflikt) koerper.push(dialogZeile(t('austausch.konflikt'), 'muted'));
+        if (a.vorher) koerper.push(dialogZeile(t('austausch.vorher', beschreibung(a.vorher)), 'muted'));
+        if (a.nachher) koerper.push(dialogZeile(t('austausch.nachher', beschreibung(a.nachher))));
+        if (a.konflikt) koerper.push(dialogZeile(t('austausch.lokal', beschreibung(a.lokal), Boolean(a.lokal?.erledigt)), 'muted'));
+        auswahl.push({ a, haken });
+    }
+    if (!aenderungen.length) koerper.push(dialogZeile(t('zusammenfuehren.nichtsNeues')));
+    koerper.push(dialogZeile(t('austausch.regel'), 'muted small'));
+    zeigeDialog({ titel: t('austausch.titel', aenderungen.length), koerper, knoepfe: [{
+        text: t('austausch.uebernehmen'), betont: true, wirkung: async () => {
+            const gewaehlt = auswahl.filter(e => e.haken.checked).map(e => e.a);
+            // Auswahl gegen den aktuellen Zustand prüfen: zwischen Vorschau und Klick kann lokal etwas geändert worden sein.
+            const aktuell = vergleicheListenstand(daten.artikel, bisher?.artikel || [], zustand.liste);
+            if (JSON.stringify(aktuell) !== JSON.stringify(aenderungen)) { zeigeStandvergleich(daten); return; }
+            await importAnwenden(gewaehlt.filter(a => a.nachher).map(a => a.nachher), 'alles');
+            for (const a of gewaehlt.filter(a => !a.nachher)) await vonListeNehmen(a.id);
+            await listenstandMerken(marke, daten.artikel);
+            melde(t('austausch.erledigt', gewaehlt.length));
+        }
+    }] });
+}
+
+
+export async function vollsicherungExportieren() {
+    try {
+        const daten = await sicherungLesen();
+        herunterladen(JSON.stringify(daten), 'einkaufsfuchs-sicherung-' + datumFuerDateiname() + '.json');
+    } catch { melde(t('sicherung.fehler')); }
+}
+
+export function vollsicherungEinlesen() {
+    const feld = document.createElement('input'); feld.type = 'file'; feld.accept = '.json,application/json';
+    feld.addEventListener('change', async () => {
+        const datei = feld.files?.[0]; if (!datei) return;
+        try {
+            if (datei.size > 50 * 1024 * 1024) throw new Error('size');
+            const daten = JSON.parse(await datei.text());
+            if (!pruefeSicherung(daten)) throw new Error('format');
+            zeigeDialog({ titel: t('sicherung.wiederherstellen'),
+                koerper: [dialogZeile(t('sicherung.ersetzt', daten.daten.artikel.length, daten.daten.liste.length))],
+                knoepfe: [{ text: t('sicherung.bestaetigen'), wirkung: async () => {
+                    try {
+                        const kopie = structuredClone(daten.daten);
+                        // Ein neues Gerät bekommt eine eigene Absenderkennung; keine kollidierenden Revisionen.
+                        kopie.einstellungen = kopie.einstellungen.filter(e => e.schluessel !== 'teilmarke');
+                        await sicherungErsetzen(kopie);
+                        window.location.reload();
+                    } catch { melde(t('sicherung.fehler')); }
+                } }]
+            });
+        } catch { melde(t('sicherung.fehler')); }
+    });
+    feld.click();
 }

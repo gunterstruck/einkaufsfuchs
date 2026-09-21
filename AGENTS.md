@@ -56,8 +56,10 @@ QR-Code mehr.
 
 ```bash
 npm run dev                 # http://localhost:8080 – ohne npm install
-npm install && npm test     # 191 Unit-Tests
+npm install && npm test     # 214 Unit-Tests
 node tools/durchlauf.mjs    # 99 Prüfungen im echten Browser + Bilder
+node tools/alltag-lauf.mjs  # 16 neue Alltagsprüfungen
+node tools/update-lauf.mjs  # 8 Updateprüfungen
 ```
 
 Für die Prüfstrecke einmalig:
@@ -84,7 +86,7 @@ Deshalb gilt dort das Gegenteil der offenen Klartext-Exporte:
 `pruefeAngebotsergebnis()` nimmt ein Angebot nur an, wenn jedes Feld trägt –
 Preis, Währung, lesbarer Grundpreis, Gültigkeitszeitraum, Trefferart – und
 die **Quelle per HTTPS auf einer Erlaubnisliste offizieller Händler-Hosts**
-liegt. Wer diese Prüfung lockert, hebelt den einzigen Schutz aus, den die App
+liegt oder für genau diesen eigenen Laden ausdrücklich lokal hinterlegt wurde. Eine Ergebnisdatei darf sich keine Quellen selbst erlauben. Wer diese Prüfung lockert, hebelt den einzigen Schutz aus, den die App
 gegen erfundene Preise hat. Details: `docs/KONZEPT.md`, Kapitel 6.7.
 
 ## Der Teil, der außerhalb dieses Repos lebt

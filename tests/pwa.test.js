@@ -30,13 +30,12 @@ describe('PWA-Aktualisierung', () => {
         expect(client).toContain('window.setInterval');
     });
 
-    it('aktiviert den neuen Worker und lädt Fenster einer alten Fassung neu', () => {
+    it('wartet mit Updates auf geschlossene Fenster und hält die Schale konsistent', () => {
         const worker = lies('sw.js');
-        expect(worker).toContain('self.skipWaiting()');
+        expect(worker).not.toContain('self.skipWaiting()');
         expect(worker).toContain('self.clients.claim()');
-        expect(worker).toContain("type: 'window'");
-        expect(worker).toContain('client.navigate(client.url)');
-        expect(worker.indexOf('fetch(anfrage)')).toBeLessThan(worker.indexOf("caches.match('index.html')"));
+        expect(worker).not.toContain('client.navigate');
+        expect(worker.indexOf("cache.match('index.html')")).toBeLessThan(worker.indexOf('fetch(anfrage)'));
     });
 });
 

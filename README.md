@@ -4,7 +4,7 @@
 ![Kein Konto](https://img.shields.io/badge/Kein%20Konto-kein%20Login%2C%20kein%20Backend-0f766e)
 ![PWA](https://img.shields.io/badge/PWA-offlinef%C3%A4hig-purple)
 ![MIT License](https://img.shields.io/badge/License-MIT-yellow)
-![Version](https://img.shields.io/badge/Version-0.12.0-orange)
+![Version](https://img.shields.io/badge/Version-0.13.0-orange)
 
 **Tippen statt Tippen.**
 
@@ -132,8 +132,8 @@ sichtbare Komplexität.
 | Artikelblatt: Wunsch, Foto und Angebote je Artikel | – | ✅ |
 | Rezepte | – | ✅ |
 | Kategorie-Reihenfolge ziehen | – | ✅ |
-| Teilen, Export und Import | – | ✅ |
-| Liste als QR-Code oder Link an ein anderes Gerät | – | ✅ |
+| Teilen, Export, Import und Vollsicherung | ✅ | ✅ |
+| Liste als QR-Code oder Link an ein anderes Gerät | ✅ | ✅ |
 | Briefing-Export als Klartext | – | ✅ |
 | Stammartikel-Export | – | ✅ |
 | Wochenangebote mit KI | ✅ | ✅ |
@@ -142,8 +142,7 @@ sichtbare Komplexität.
 
 Der Wechsel ist jederzeit und **verlustfrei** möglich, und zwar wörtlich: Er
 berührt genau einen Wert in den Einstellungen. Eine Menge, die im
-Expertenmodus entstanden ist, steht in der Datenbank weiter – Basis zeigt sie
-nur nicht an. Wer zurückschaltet, findet sie unverändert wieder.
+Expertenmodus entstanden ist, steht in der Datenbank weiter – Basis zeigt sie ebenfalls an; bearbeitet wird sie im Artikelblatt des Expertenmodus.
 
 ---
 
@@ -234,10 +233,7 @@ Danach baut jeder Push auf `main` automatisch neu.
 
 Die installierte PWA prüft unmittelbar beim Start, bei der Rückkehr aus dem
 Hintergrund und während einer offenen Sitzung regelmäßig auf eine neue
-Fassung. Ein neuer Service Worker aktiviert sich ohne Wartestand und lädt
-bereits offene Foxi-Fenster neu; die Einkaufsdaten in IndexedDB bleiben
-davon unberührt. Seitenaufrufe sind online netzwerkzuerst und fallen offline
-auf die vollständig gespeicherte App-Schale zurück.
+Fassung. Ein neuer Service Worker wartet, bis alle offenen Foxi-Fenster geschlossen sind. So verliert ein geöffnetes Artikelblatt keine Eingaben. Danach wird die vollständig zwischengespeicherte neue Fassung aktiviert. Seiten und Module kommen stets aus derselben Cache-Version; IndexedDB bleibt erhalten.
 
 `vercel.json` setzt außerdem die Kopfzeilen, die zum Grundsatz gehören:
 
@@ -263,14 +259,15 @@ der Adresse erreichbar. Das ist kein Leck – dieselben Dateien liegen ohnehin
 ### Prüfen
 
 ```bash
-npm install && npm test          # 93 Unit-Tests (Logik, Daten, Import, PWA und Designsystem)
+npm install && npm test          # 214 Unit-Tests (Logik, Daten, Import, PWA und Designsystem)
 
 npm i --no-save playwright && npx playwright install chromium
-node tools/durchlauf.mjs         # 68 Prüfungen im echten Browser + Bilder
-node tools/update-lauf.mjs       # echter Wechsel von alter auf neue PWA-Fassung
+node tools/durchlauf.mjs         # 99 Prüfungen im echten Browser + Bilder
+node tools/update-lauf.mjs       # 8 Prüfungen: Update mit zwei offenen Fenstern
+node tools/alltag-lauf.mjs       # 16 Prüfungen: neue Alltagsfunktionen, Gerätewechsel und Vollsicherung
 ```
 
-Die Prüfstrecke (68 Prüfungen) fährt die Abnahmekriterien ab, die man mit
+Die Prüfstrecke (99 Prüfungen) fährt die Abnahmekriterien ab, die man mit
 Unit-Tests nicht erreicht: die Zwei-Tipp-Regel, zehn simulierte Einkäufe, den
 verlustfreien Moduswechsel, Rezepte, das Ziehen der Kategorien mit Zeiger und
 mit Tastatur, den Briefing-Export aus der echten Zwischenablage und einen
@@ -390,9 +387,19 @@ in den normalen Listenexport aufgenommen.
 
 ---
 
+
+## Neu in 0.13.0
+
+- **Diese Woche wieder?** Bis zu fünf begründete Vorschläge aus mindestens drei verschiedenen Kauftagen. Ein stabiler Rhythmus zählt; sehr alte oder unregelmäßige Käufe erzeugen keine Empfehlung. „Noch genug“ verschiebt einen Vorschlag lokal um zwei bis sieben Tage.
+- **Mein Laden merkt sich den Weg.** Einen gespeicherten Laden wählen, Einkauf starten und am Ende beenden. Nach mindestens drei Einkäufen mit je drei Kategorien bietet Foxi eine Reihenfolge an. Sie gilt erst nach ausdrücklicher Übernahme und nur beim Einkauf in diesem Laden. Kein GPS, keine Karte, keine Cloud.
+- **Was hat sich geändert?** Dateien und Links tragen eine anonyme Absenderkennung und einen Stand. Beim erneuten Empfang vergleicht Foxi mit dem zuletzt übernommenen Stand. Neue Artikel und Mengenänderungen werden einzeln gezeigt; Konflikte und Löschungen sind nicht vorausgewählt. Alte Links überschreiben keinen neueren Stand. Das ist bewusster Austausch, kein Live-Sync. Ältere Dateien und Links funktionieren weiterhin über den bisherigen Importdialog.
+- **Acht verbreitete Händler plus eigene Läden:** ALDI Nord, ALDI Süd, Lidl, REWE, EDEKA, Kaufland, Netto Marken-Discount und PENNY. Bei „Sonstiger Laden“ stehen Name und Adresse im Filialfeld. Eine eigene offizielle HTTPS-Angebotsseite kann ausdrücklich hinterlegt werden. Foxi erlaubt dann diesen Host für genau diesen Laden; Preise und Kalenderdaten werden weiterhin geprüft. Eine akzeptierte Datei ist kein Nachweis dafür, dass der Händler den Preis tatsächlich anbietet.
+- **Teilen und Vollsichern auch in Basis.** Die normale Liste bleibt ohne Kaufhistorie oder Fotos. Die getrennte Vollsicherung enthält alle lokalen Speicher und ersetzt sie nach Bestätigung atomar. Sie ist privat und unverschlüsselt; vor Wiederherstellung andere Foxi-Fenster schließen. Ein wiederhergestelltes Gerät erhält beim nächsten Teilen eine neue Absenderkennung.
+- **Fehlerkorrekturen:** unterbrochene Erstbefüllung reparieren, Updates ohne erzwungenen Neustart, erledigte Rezeptzutaten erneut übernehmen, Gesamt-Kaufzahlen über 60 korrekt anzeigen und unmögliche Kalendertage ablehnen. Mengen bleiben auch im Basismodus sichtbar.
+
 ## Stand und was als Nächstes kommt
 
-**Gebaut (v0.12.0):** Version 1 ist inhaltlich vollständig – Basismodus,
+**Gebaut (v0.13.0):** Version 1 ist inhaltlich vollständig – Basismodus,
 lernender Katalog, Rezepte, Kategorie-Reihenfolge per Ziehen, Teilen als
 Datei mit Zusammenführung beim Import, Briefing-Export, Statistik,
 Offlinebetrieb, Installierbarkeit. Der geführte Angebotscheck verbindet Foxis
@@ -416,9 +423,7 @@ Chromium; die Emoji stammen aber aus der Schrift des Betriebssystems, und
 `navigator.share` mit Dateien verhält sich auf iOS anders als am
 Schreibtisch. Was hier grün ist, ist geprüft – aber nicht auf einem iPhone.
 
-**Später:** Ladenzuordnung ohne GPS, optionale Preise, Rhythmus-Erkennung aus
-`letzteKaeufe`, Supermarkt-Standorte aus OpenStreetMap (einmalig für eine
-Region geladen, danach lokal).
+**Später:** optionale Preise und eine bewusst gestartete Kartenauswahl für Ladenstandorte. Ein Google-Maps-Link ist als Idee vorgemerkt, aber nicht umgesetzt. Es gibt weiterhin keinen automatischen Standortabruf.
 
 ### Abnahmekriterien für Version 1
 
@@ -435,14 +440,7 @@ Region geladen, danach lokal).
 
 ## Netzwerk
 
-Foxi stellt im Betrieb **keine** Anfragen. Beim allerersten Start liest es
-`src/daten/katalog.json` und `src/daten/rezepte.json` von derselben Herkunft
-und legt beides in IndexedDB ab; danach werden die Dateien nie wieder gelesen.
-Der Service Worker beantwortet ab dem zweiten Start alles aus dem
-Zwischenspeicher.
-
-Die einzigen Verbindungen, die überhaupt entstehen können, sind die des
-Webspace, von dem die App geladen wird – und die der Browser selbst führt.
+Foxi sendet keine Einkaufsdaten automatisch an fremde Dienste. App-Dateien, Erstbefüllung und Service-Worker-Updateprüfungen stammen von der eigenen Herkunft. Nach der Installation läuft die App vollständig offline; bei vorhandenem Netz prüft sie regelmäßig auf neue Fassungen. Händlerseiten werden nur durch bewusst angeklickte Links außerhalb der App geöffnet.
 
 ---
 

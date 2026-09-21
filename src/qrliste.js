@@ -29,6 +29,8 @@
 
 /* Die Kennung bleibt, wie sie ist – sie steht in jedem erzeugten Code. Eine
    neue Kennung ließe Foxi seine eigenen älteren Codes abweisen. */
+import { gueltigeTeilmarke } from './logik.js';
+
 export const QR_TYP = 'foxi-qr';
 export const QR_VERSION = 1;
 /**
@@ -269,6 +271,8 @@ export async function pruefeQrListe(anteil) {
     if (!Array.isArray(daten.a) || daten.a.length > QR_GRENZEN.artikelAnzahl) {
         return { gueltig: false, grund: 'kaputt', daten: null };
     }
+    if (daten.x !== undefined && !gueltigeTeilmarke(daten.x)) return { gueltig: false, grund: 'kaputt', daten: null };
+    if (new Set(daten.a.map(a => a?.i)).size !== daten.a.length) return { gueltig: false, grund: 'kaputt', daten: null };
     const artikelGueltig = daten.a.every((satz) => {
         if (!satz || typeof satz !== 'object' || Array.isArray(satz)) return false;
         if (!istText(satz.i, QR_GRENZEN.id) || !satz.i.trim()) return false;

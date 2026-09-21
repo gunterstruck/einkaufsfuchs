@@ -28,7 +28,7 @@ Versuch aus.
 
 ## Einmal einrichten
 
-1. Unter **Mehr → Wochenangebote mit KI** auf **Geführt einrichten** tippen.
+1. Unter **Mehr → Wochenangebote mit KI → Meine Märkte** zunächst die eigenen Filialen hinterlegen. Angeboten werden ALDI Nord, ALDI Süd, Lidl, REWE, EDEKA, Kaufland, Netto Marken-Discount, PENNY und Sonstiger Laden. Bei sonstigen Läden Name und Adresse sowie für die Recherche eine offizielle HTTPS-Angebotsseite eintragen. Anschließend **Geführt einrichten** öffnen.
 2. **Rechercheauftrag kopieren** wählen.
 3. Den Auftrag in Claude Cowork, ChatGPT oder einen anderen Assistenten mit
    Webrecherche einfügen und ausführen lassen.
@@ -68,8 +68,7 @@ Version 2 an. Jeder Treffer muss unter anderem enthalten:
 - Preis, Packungsgröße und Grundpreis
 - Beginn und Ende der Gültigkeit
 - Kennzeichnung als genauer Treffer oder Alternative
-- eine öffentliche HTTPS-Quelle von `aldi-nord.de`, `aldi-sued.de` oder
-  `rewe.de`
+- eine öffentliche HTTPS-Quelle eines der acht angebotenen Händler oder die für genau diesen eigenen Laden lokal hinterlegte Quelle
 
 In Version 2 muss der Grundpreis eine positive Zahl und einen eindeutigen
 Nenner tragen, beispielsweise `0,99 €/l`, `1,49 €/kg` oder
@@ -104,3 +103,5 @@ können das Ergebnis verändern. Die belastbare Aussage lautet deshalb:
 Nicht:
 
 > Dieser Händler ist garantiert überall am günstigsten.
+
+Die Prüfung bestätigt zulässiges Format, echte Kalenderdaten und erlaubte Quellenhosts. Sie ist keine unabhängige Prüfung des Händlerpreises. Eine optionale Kartenauswahl (etwa Google Maps) bleibt für eine spätere Fassung vorgemerkt.

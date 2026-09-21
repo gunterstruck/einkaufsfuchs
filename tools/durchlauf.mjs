@@ -254,7 +254,7 @@ await seite.waitForTimeout(200);
 /* Verlustfrei zurück: Basis blendet den Wunsch aus, löscht ihn aber nicht. */
 await seite.locator('#modus-schalter .seg[data-modus="basis"]').tap();
 await seite.waitForTimeout(150);
-pruefe(await seite.locator('.karte-zusatz').count() === 0, 'Basis blendet die Menge aus');
+pruefe(await seite.locator('.karte-zusatz').count() > 0, 'Basis zeigt die benötigte Menge ebenfalls');
 await seite.locator('#modus-schalter .seg[data-modus="experte"]').tap();
 await seite.waitForTimeout(150);
 pruefe((await seite.locator('.karte-zusatz').first().textContent())?.includes('2 Liter'),
@@ -313,7 +313,7 @@ await seite.locator('.meine-maerkte > summary').tap();
 await seite.locator('.meine-maerkte button', { hasText: 'Markt hinzufügen' }).tap();
 await seite.waitForSelector('.dialog select');
 await seite.locator('.dialog select').selectOption('REWE');
-await seite.locator('.dialog input').fill('Rellinghauser Straße 239, Essen');
+await seite.getByRole('textbox', { name: 'Filiale oder Adresse', exact: true }).fill('Rellinghauser Straße 239, Essen');
 await seite.locator('.dialog .primary').tap();
 await seite.waitForSelector('.maerkte-liste');
 pruefe((await seite.locator('.maerkte-liste').textContent())?.includes('REWE'),
@@ -329,13 +329,13 @@ pruefe(hilfetext?.includes('Claude Cowork') && hilfetext.includes('ChatGPT') &&
 await seite.screenshot({ path: join(bilder, '07a-angebote-einfuehrung.png') });
 await seite.locator('.dialog button', { hasText: 'Rechercheauftrag kopieren' }).tap();
 await seite.waitForTimeout(300);
-const angebotsauftrag = await seite.evaluate(() => navigator.clipboard.readText());
+const angebotsauftrag = await seite.evaluate(() => navigator.clipboard.readText().then(text => text.replace(/\r\n/g, '\n')));
 pruefe(angebotsauftrag.includes('WÖCHENTLICHER FOXI-ANGEBOTSRADAR') &&
     angebotsauftrag.includes('foxi-persoenlich'),
     'Der Rechercheauftrag trägt Regelwerk und Profil');
 pruefe(angebotsauftrag.includes('REWE') && angebotsauftrag.includes('Rellinghauser Straße'),
     'Der Auftrag nennt nur den aktivierten Markt');
-const profilText = angebotsauftrag.split('Eingabeprofil:\n')[1];
+const profilText = angebotsauftrag.split(/Eingabeprofil:\r?\n/)[1];
 const profilImAuftrag = JSON.parse(profilText);
 pruefe(profilImAuftrag.demo === false &&
     !Object.hasOwn(profilImAuftrag, 'wohnadresse') &&
@@ -436,7 +436,7 @@ pruefe(await seite.locator('.ort-feld').inputValue() === '45136 Essen',
 /* ── Experte: Briefing-Export ───────────────────────────────────────────── */
 await seite.locator('button', { hasText: 'Liste als Text kopieren' }).tap();
 await seite.waitForTimeout(300);
-const ausDerZwischenablage = await seite.evaluate(() => navigator.clipboard.readText());
+const ausDerZwischenablage = await seite.evaluate(() => navigator.clipboard.readText().then(text => text.replace(/\r\n/g, '\n')));
 const klartextZeilen = ausDerZwischenablage.split('\n');
 pruefe(/^Einkaufsliste \(\d{2}\.\d{2}\.\d{4}\)$/.test(klartextZeilen[0]),
     'Der Klartext beginnt mit der Überschrift');
@@ -452,7 +452,7 @@ pruefe(ausDerZwischenablage.split('\n')[1] === 'Ort: 45136 Essen',
 /* ── Experte: Stammartikel ──────────────────────────────────────────────── */
 await seite.locator('button', { hasText: 'Stammartikel kopieren' }).tap();
 await seite.waitForTimeout(300);
-const stammtext = await seite.evaluate(() => navigator.clipboard.readText());
+const stammtext = await seite.evaluate(() => navigator.clipboard.readText().then(text => text.replace(/\r\n/g, '\n')));
 pruefe(/^Stammartikel \(EinkaufsFuchs, Stand \d{2}\.\d{2}\.\d{4}\)\nOrt: 45136 Essen\n\n/.test(stammtext),
     'Der Stammartikel-Export trägt Kopf und Ort');
 /* Nach zehn Einkäufen von Milch, Brot und Butter müssen genau die vorn
@@ -667,7 +667,7 @@ await seite.mouse.down();
 await seite.waitForTimeout(700);
 await seite.mouse.up();
 await seite.waitForTimeout(200);
-pruefe(await seite.evaluate(() => navigator.clipboard.readText()) === 'Sardellenpaste',
+pruefe(await seite.evaluate(() => navigator.clipboard.readText().then(text => text.replace(/\r\n/g, '\n'))) === 'Sardellenpaste',
     'Langes Drücken kopiert nur den Artikelnamen');
 pruefe(await seite.locator('.kachel').first().evaluate((el) => !el.classList.contains('ist-drauf')),
     'Langes Drücken legt den Artikel nicht zusätzlich auf die Liste');
@@ -748,7 +748,7 @@ zweiteSeite.on('pageerror', (fehler) => fehlerAufDerSeite.push(`[Gerät 2] ${feh
 await zweiteSeite.goto(qrAdresse, { waitUntil: 'networkidle' });
 await zweiteSeite.waitForSelector('.dialog');
 const frageText = await zweiteSeite.locator('.dialog-koerper').textContent();
-pruefe(/neue[rn]? Artikel/.test(frageText || ''),
+pruefe(/Neu:/.test(frageText || ''),
     `Das zweite Gerät fragt erst, bevor es übernimmt (${frageText?.trim()})`);
 
 await zweiteSeite.locator('.dialog-knoepfe button').first().tap();
@@ -775,7 +775,7 @@ await zweitesGeraet.close();
 await seite.evaluate(() => navigator.clipboard.writeText('noch nichts'));
 await seite.locator('.dialog-knoepfe button.primary').tap();
 await seite.waitForTimeout(300);
-const ablage = await seite.evaluate(() => navigator.clipboard.readText());
+const ablage = await seite.evaluate(() => navigator.clipboard.readText().then(text => text.replace(/\r\n/g, '\n')));
 pruefe(ablage === qrAdresse, 'Der Knopf legt denselben Link in die Zwischenablage');
 
 /* Und die Gegenrichtung auf einem dritten Gerät: Link aus der Nachricht
@@ -799,7 +799,7 @@ await dritteSeite.locator('#tab-mehr').tap();
 await dritteSeite.getByRole('button', { name: 'Link einfügen', exact: true }).tap();
 await dritteSeite.waitForSelector('.dialog');
 const dritterText = await dritteSeite.locator('.dialog-koerper').textContent();
-pruefe(/neue[rn]? Artikel/.test(dritterText || ''),
+pruefe(/Neu:/.test(dritterText || ''),
     `Ein eingefügter Link fragt ebenso vor dem Übernehmen (${dritterText?.trim()})`);
 await dritteSeite.locator('.dialog-knoepfe button').first().tap();
 await dritteSeite.locator('#tab-liste').tap();

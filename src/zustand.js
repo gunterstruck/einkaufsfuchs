@@ -64,16 +64,25 @@ async function erstbefuellung(basisPfad) {
        Ohne sie gäbe es keinen Weg zurück, nachdem jemand die Kategorien
        einmal durcheinandergezogen hat. */
     const kategorien = katalog.kategorien.map((k) => ({ ...k, ursprung: k.position }));
-    await db.legeViele(db.SPEICHER.KATEGORIEN, kategorien);
-    await db.legeViele(db.SPEICHER.ARTIKEL, artikel);
-    await db.legeViele(db.SPEICHER.REZEPTE, rezepte.rezepte);
-    await db.lege(db.SPEICHER.EINSTELLUNGEN, { schluessel: 'modus', wert: 'basis' });
-    await db.lege(db.SPEICHER.EINSTELLUNGEN, { schluessel: 'katalogVersion', wert: katalog.version });
+    // Auch einen früher unterbrochenen Erststart reparieren, ohne eigene Daten zu ersetzen.
+    const fehlende = async (speicher, werte, feld = 'id') => {
+        const ids = new Set((await db.alle(speicher)).map(e => e[feld]));
+        return werte.filter(e => !ids.has(e[feld]));
+    };
+    const einstellungen = await fehlende(db.SPEICHER.EINSTELLUNGEN,
+        [{ schluessel: 'modus', wert: 'basis' }], 'schluessel');
+    await db.atomar({
+        [db.SPEICHER.KATEGORIEN]: await fehlende(db.SPEICHER.KATEGORIEN, kategorien),
+        [db.SPEICHER.ARTIKEL]: await fehlende(db.SPEICHER.ARTIKEL, artikel),
+        [db.SPEICHER.REZEPTE]: await fehlende(db.SPEICHER.REZEPTE, rezepte.rezepte),
+        [db.SPEICHER.EINSTELLUNGEN]: [...einstellungen,
+            { schluessel: 'katalogVersion', wert: katalog.version }]
+    });
 }
 
 export async function starte(basisPfad = './') {
     let kategorien = await db.alle(db.SPEICHER.KATEGORIEN);
-    if (kategorien.length === 0) {
+    if (kategorien.length === 0 || !(await db.hole(db.SPEICHER.EINSTELLUNGEN, 'katalogVersion')) || (await db.alle(db.SPEICHER.ARTIKEL)).length === 0) {
         await erstbefuellung(basisPfad);
         kategorien = await db.alle(db.SPEICHER.KATEGORIEN);
     }
@@ -204,6 +213,11 @@ export async function abhaken(artikelId) {
         db.lege(db.SPEICHER.LISTE, eintrag),
         db.lege(db.SPEICHER.ARTIKEL, artikel)
     ]);
+    const einkauf = zustand.einstellungen.laufenderEinkauf;
+    if (einkauf) {
+        await einstellungSpeichern('laufenderEinkauf', { ...einkauf,
+            schritte: [...einkauf.schritte, { artikelId, kategorieId: artikel.kategorieId, zeit: jetzt }].slice(-1000) });
+    }
     melde('abhaken');
 }
 
@@ -216,6 +230,9 @@ export async function zurueckholen(artikelId) {
     if (!eintrag || !artikel || !eintrag.erledigt) return;
 
     const zeitpunkt = eintrag.erledigtAm;
+    const einkauf = zustand.einstellungen.laufenderEinkauf;
+    if (einkauf) await einstellungSpeichern('laufenderEinkauf', { ...einkauf,
+        schritte: einkauf.schritte.filter(s => !(s.artikelId === artikelId && s.zeit === zeitpunkt)) });
     eintrag.erledigt = false;
     eintrag.erledigtAm = null;
     if (zeitpunkt) {
@@ -267,7 +284,7 @@ export async function eintragAendern(artikelId, felder) {
 export async function artikelAnlegen(name, kategorieId, icon = '🛒') {
     const sauber = String(name || '').trim();
     if (!sauber) return null;
-    const id = `eigen-${Date.now().toString(36)}`;
+    const id = `eigen-${crypto.randomUUID()}`;
     const artikel = {
         id,
         name: sauber,
@@ -332,7 +349,7 @@ export async function rezeptAnlegen(name, artikelIds) {
     const sauber = String(name || '').trim();
     if (!sauber || !artikelIds?.length) return null;
     const rezept = {
-        id: `rezept-eigen-${Date.now().toString(36)}`,
+        id: `rezept-eigen-${crypto.randomUUID()}`,
         name: sauber,
         artikelIds: [...new Set(artikelIds)],
         eigen: true
@@ -359,7 +376,7 @@ export async function rezeptAufListe(id) {
     if (!rezept) return 0;
 
     const neue = rezept.artikelIds.filter(
-        (artikelId) => zustand.artikel.has(artikelId) && !zustand.liste.has(artikelId)
+        (artikelId) => zustand.artikel.has(artikelId) && (!zustand.liste.has(artikelId) || zustand.liste.get(artikelId).erledigt)
     );
     const eintraege = neue.map((artikelId) => ({
         artikelId, menge: zustand.artikel.get(artikelId)?.standardWunsch || '', notiz: '', erledigt: false, erledigtAm: null
@@ -603,4 +620,81 @@ export async function allesZuruecksetzen() {
     zustand.rezepte = [];
     zustand.einstellungen = { modus: 'basis' };
     zustand.bereit = false;
+}
+
+
+export async function einstellungSpeichern(schluessel, wert) {
+    const vorher = zustand.einstellungen[schluessel];
+    // Der nächste schnelle Tipp muss schon den vorgemerkten Stand sehen.
+    zustand.einstellungen[schluessel] = wert;
+    try { await db.lege(db.SPEICHER.EINSTELLUNGEN, { schluessel, wert }); }
+    catch (fehler) {
+        if (zustand.einstellungen[schluessel] === wert) zustand.einstellungen[schluessel] = vorher;
+        throw fehler;
+    }
+    if (!['teilmarke', 'empfangeneStaende'].includes(schluessel)) melde('einstellungen');
+}
+
+export async function wiederkaufVerschieben(artikelId, tage = 3) {
+    await einstellungSpeichern('wiederkaufSpaeter', {
+        ...zustand.einstellungen.wiederkaufSpaeter,
+        [artikelId]: Date.now() + tage * 86400000
+    });
+}
+
+export async function einkaufStarten(marktId) {
+    if (!maerkte().some(m => m.id === marktId) || zustand.einstellungen.laufenderEinkauf) return false;
+    await einstellungSpeichern('laufenderEinkauf', { marktId, gestartet: Date.now(), schritte: [] });
+    return true;
+}
+
+export async function einkaufBeenden() {
+    const einkauf = zustand.einstellungen.laufenderEinkauf;
+    if (!einkauf) return;
+    const wege = { ...zustand.einstellungen.laufwege };
+    const bisher = wege[einkauf.marktId] || { einkaeufe: [], reihenfolge: [] };
+    const kategorien = [...new Set(einkauf.schritte.map(s => s.kategorieId))];
+    wege[einkauf.marktId] = { ...bisher, einkaeufe: [...bisher.einkaeufe,
+        { zeit: Date.now(), kategorien }].slice(-8) };
+    await db.atomar({ [db.SPEICHER.EINSTELLUNGEN]: [
+        { schluessel: 'laufwege', wert: wege }, { schluessel: 'laufenderEinkauf', wert: null }
+    ] });
+    zustand.einstellungen.laufwege = wege;
+    zustand.einstellungen.laufenderEinkauf = null;
+    melde('einstellungen');
+}
+
+export async function laufwegUebernehmen(marktId, reihenfolge) {
+    const wege = { ...zustand.einstellungen.laufwege };
+    wege[marktId] = { ...wege[marktId], reihenfolge: [...reihenfolge] };
+    await einstellungSpeichern('laufwege', wege);
+}
+
+export function listenKategorien() {
+    const marktId = zustand.einstellungen.laufenderEinkauf?.marktId;
+    const ids = zustand.einstellungen.laufwege?.[marktId]?.reihenfolge;
+    if (!ids?.length) return zustand.kategorien;
+    const reihenfolge = [...ids, ...zustand.kategorien.map(k => k.id).filter(id => !ids.includes(id))];
+    return reihenfolge.map((id,position) => ({ ...zustand.kategorien.find(k => k.id === id), position })).filter(k => k.id);
+}
+
+let teilauftrag = Promise.resolve();
+export function neueTeilmarke() {
+    const inhalt = JSON.stringify(offeneEintraege().map(e => [e.artikelId, e.menge || '', e.notiz || '', zustand.artikel.get(e.artikelId)?.name]).sort((a,b) => a[0].localeCompare(b[0])));
+    const arbeit = teilauftrag.then(async () => {
+        const bisher = zustand.einstellungen.teilmarke;
+        if (bisher?.inhalt === inhalt) return { serie: bisher.serie, revision: bisher.revision };
+        const wert = { serie: bisher?.serie || crypto.randomUUID(), revision: (bisher?.revision || 0) + 1, inhalt };
+        await einstellungSpeichern('teilmarke', wert);
+        return { serie: wert.serie, revision: wert.revision };
+    });
+    teilauftrag = arbeit.catch(() => {});
+    return arbeit;
+}
+
+export async function listenstandMerken(marke, artikel) {
+    const staende = { ...zustand.einstellungen.empfangeneStaende };
+    staende[marke.serie] = { revision: marke.revision, artikel: structuredClone(artikel), zeit: Date.now() };
+    const begrenzt = Object.fromEntries(Object.entries(staende).sort((a,b) => b[1].zeit-a[1].zeit).slice(0,20));
+    await einstellungSpeichern('empfangeneStaende', begrenzt);
 }

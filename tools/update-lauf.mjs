@@ -2,7 +2,7 @@
  * Echte PWA-Aktualisierung mit zwei nacheinander ausgelieferten Workern.
  *
  * Der Lauf beweist drei Dinge im Browser: Der neue Worker wird entdeckt, ein
- * bereits offenes Fenster wechselt ohne Nutzereingriff auf die neue Fassung,
+ * offenes Fenster behält seine Eingaben bis alle Fenster geschlossen sind,
  * und lokale IndexedDB-Daten überleben den Anwendungsneustart.
  */
 import { createServer } from 'node:http';
@@ -83,7 +83,8 @@ const pruefe = (bedingung, text) => {
 };
 
 try {
-    const seite = await browser.newPage();
+    const kontext = await browser.newContext();
+    let seite = await kontext.newPage();
     let navigationen = 0;
     seite.on('framenavigated', (frame) => {
         if (frame === seite.mainFrame()) navigationen += 1;
@@ -111,19 +112,32 @@ try {
         };
     }));
 
-    navigationen = 0;
-    const neuGeladen = seite.waitForEvent('framenavigated', {
-        predicate: (frame) => frame === seite.mainFrame(),
-        timeout: 15000
+    const zweitesFenster = await kontext.newPage();
+    await zweitesFenster.goto(adresse, { waitUntil: 'networkidle' });
+    await zweitesFenster.waitForFunction(() => Boolean(navigator.serviceWorker.controller));
+    await seite.evaluate(async () => {
+        const z = await import('./src/zustand.js'); await z.modusSetzen('experte');
+        await z.aufListeSetzen('milch');
     });
+    await seite.locator('.karte-stift').first().click();
+    await seite.locator('.mengen-editor input[type=text]').fill('Mein ungespeicherter Wunsch');
+    navigationen = 0;
     await seite.evaluate(async () => {
         await fetch('/__neue_fassung', { method: 'POST' });
         const registrierung = await navigator.serviceWorker.getRegistration();
         await registrierung.update();
     });
-    await neuGeladen;
-    await seite.waitForLoadState('domcontentloaded');
-    await seite.waitForTimeout(500);
+    await seite.waitForFunction(async () => Boolean((await navigator.serviceWorker.getRegistration())?.waiting));
+    pruefe(navigationen === 0, 'Ein Update lädt offene Fenster nicht neu');
+    pruefe(await seite.locator('.mengen-editor input[type=text]').inputValue() === 'Mein ungespeicherter Wunsch', 'Ungespeicherte Eingaben bleiben erhalten');
+    await zweitesFenster.bringToFront();
+    await zweitesFenster.waitForFunction(async () => Boolean((await navigator.serviceWorker.getRegistration()).waiting));
+    await seite.close();
+    pruefe(await zweitesFenster.evaluate(async () => (await caches.keys()).includes('einkaufsfuchs-update-test-alt')), 'Die alte Fassung bleibt bis zum Schließen des zweiten Fensters aktiv');
+    await zweitesFenster.close();
+    seite = await kontext.newPage();
+    await seite.goto(adresse, { waitUntil: 'networkidle' });
+    await seite.waitForFunction(async () => !(await caches.keys()).includes('einkaufsfuchs-update-test-alt'));
 
     const ergebnis = await seite.evaluate(async () => {
         const wert = await new Promise((fertig, kaputt) => {
@@ -143,7 +157,6 @@ try {
     });
 
     pruefe(workerAbrufe >= 2, `Browser hat nach der neuen Worker-Fassung gefragt (${workerAbrufe} Abrufe)`);
-    pruefe(navigationen >= 1, 'Das bereits offene Foxi-Fenster wurde automatisch neu geladen');
     pruefe(ergebnis.gesteuert, 'Der neue Worker steuert das neu geladene Fenster');
     pruefe(ergebnis.caches.includes(cacheNeu), 'Der neue App-Cache ist aktiv');
     pruefe(!ergebnis.caches.includes('einkaufsfuchs-update-test-alt'), 'Der alte App-Cache wurde entfernt');
@@ -157,4 +170,4 @@ if (befunde.length > 0) {
     console.error(`\n${befunde.length} Update-Prüfung(en) fehlgeschlagen.`);
     process.exit(1);
 }
-console.log('\n6/6 Update-Prüfungen bestanden.');
+console.log('\n8/8 Update-Prüfungen bestanden.');

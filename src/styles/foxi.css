@@ -1258,3 +1258,12 @@ body:not(.modus-experte) .experte-nur { display: none !important; }
         bottom: 22px;
     }
 }
+
+.alltagsassistent:empty { display: none; }
+.assistent-zeile { margin-block: 1rem; }
+.assistent-zeile button, .laufweg button { margin: 0.25rem; }
+.laufweg select { max-width: 100%; width: 100%; }
+.wiederkauf summary, .laufweg summary { cursor: pointer; font-weight: 600; }
+
+.stand-aenderung { display: flex; align-items: center; gap: 0.6rem; margin-block-start: 1rem; min-height: 44px; }
+.stand-aenderung input { width: 1.3rem; height: 1.3rem; }

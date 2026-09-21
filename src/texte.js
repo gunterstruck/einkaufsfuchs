@@ -86,6 +86,7 @@ const DE = {
     },
 
     mehr: {
+        updateHinweis: 'Neue Fassungen werden vorbereitet und nach dem Schließen aller Foxi-Fenster aktiviert. Laufende Eingaben werden nicht durch Updates unterbrochen.',
         titel: 'Mehr',
         ueberTitel: 'Über EinkaufsFuchs',
         ueberText:
@@ -211,7 +212,51 @@ const DE = {
         geloescht: 'Ort entfernt'
     },
 
+    sicherung: {
+        exportieren: 'Alles auf diesem Gerät sichern',
+        wiederherstellen: 'Vollsicherung wiederherstellen',
+        hinweis: 'Eine geteilte Liste ist keine Sicherung. Die Vollsicherung enthält auch Kaufhistorie, Rezepte, Fotos und Einstellungen. Bewahre sie privat auf; sie ist nicht verschlüsselt.',
+        ersetzt: (artikel, liste) => 'Diese Sicherung enthält ' + artikel + ' Artikel und ' + liste + ' Listeneinträge. Sie ersetzt sämtliche lokalen Daten. Sichere deinen bisherigen Stand zuerst und schließe andere Foxi-Fenster.',
+        bestaetigen: 'Lokale Daten durch Sicherung ersetzen',
+        fehler: 'Die Sicherung konnte nicht verarbeitet werden. Deine bisherigen Daten bleiben bei fehlgeschlagener Wiederherstellung erhalten.'
+    },
+    austausch: {
+        titel: n => 'Änderungen prüfen (' + n + ')',
+        vergleich: 'Verglichen mit dem zuletzt von diesem Gerät übernommenen Stand.',
+        ersterStand: 'Erste Liste von diesem Gerät. Prüfe, was du übernehmen möchtest.',
+        eigenerStand: 'Diese Liste stammt von diesem Gerät.',
+        alterStand: 'Diesen oder einen neueren Stand hast du bereits übernommen.',
+        neu: name => 'Neu: ' + name,
+        geaendert: name => 'Geändert: ' + name,
+        entfernt: name => 'Entfernt: ' + name,
+        vorher: menge => 'Vorher: ' + menge,
+        nachher: menge => 'Gesendet: ' + menge,
+        lokal: (menge, erledigt) => 'Bei dir: ' + menge + (erledigt ? ' (bereits erledigt)' : ''),
+        konflikt: 'Auch bei dir geändert. Nur anhaken, wenn der gesendete Stand gewinnen soll.',
+        regel: 'Nur angehakte Änderungen werden übernommen. Entfernte Artikel und Konflikte sind zunächst nicht ausgewählt. Andere eigene Artikel bleiben erhalten.',
+        uebernehmen: 'Auswahl übernehmen',
+        erledigt: n => n + ' Änderungen übernommen'
+    },
+    alltag: {
+        wiederTitel: n => 'Diese Woche wieder? (' + n + ')',
+        rhythmus: (name, tage, seit) => name + ': ungefähr alle ' + tage + ' Tage gekauft, zuletzt vor ' + seit + ' Tagen.',
+        dazu: name => name + ' auf die Liste',
+        genug: 'Noch genug',
+        ladenTitel: 'In welchem Laden?',
+        unterwegs: 'Dein Einkauf läuft',
+        unbekannterLaden: 'Gespeicherter Laden',
+        starten: 'Einkauf starten',
+        beenden: 'Einkauf beenden',
+        lernenErklaerung: 'Foxi merkt sich nur hier auf dem Gerät die Reihenfolge beim Abhaken. Nach drei Einkäufen kann es einen Laufweg für diesen Laden vorschlagen.',
+        laufwegVorschlag: name => 'Gelernten Laufweg für ' + name + ' verwenden?',
+        laufwegMerken: 'Diesen Laufweg merken'
+    },
     angebote: {
+        sonstigerLaden: 'Sonstiger Laden',
+        nameUndAdresse: 'Name des Ladens und genaue Adresse',
+        eigeneQuelle: 'Offizielle Angebotsseite (optional, https://…)',
+        quelleFehler: 'Bitte eine vollständige HTTPS-Adresse ohne Zugangsdaten eingeben.',
+        quellenHinweis: 'Bei sonstigen Läden bitte Name und Adresse angeben. Für den Angebotscheck zusätzlich die offizielle Händlerseite hinterlegen. Foxi prüft das Format und die Quelle, nicht die Preise beim Händler.',
         titel: 'Wochenangebote mit KI',
         erklaerung:
             'Foxi erstellt den Rechercheauftrag. Ein KI-Assistent prüft öffentliche Angebotsseiten. ' +

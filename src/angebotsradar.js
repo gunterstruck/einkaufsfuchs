@@ -14,7 +14,25 @@ export const ANGEBOTSPROFIL_VERSION = 1;
 export const ANGEBOTSERGEBNIS_TYP = 'foxi-angebote';
 export const ANGEBOTSERGEBNIS_VERSION = 2;
 
-const OFFIZIELLE_HOSTS = ['aldi-nord.de', 'aldi-sued.de', 'rewe.de'];
+export const HAENDLER = Object.freeze([
+    { name: 'ALDI Nord', url: 'https://www.aldi-nord.de/angebote.html', host: 'aldi-nord.de' },
+    { name: 'ALDI Süd', url: 'https://www.aldi-sued.de/angebote', host: 'aldi-sued.de' },
+    { name: 'Lidl', url: 'https://www.lidl.de/c/online-prospekte/s10005610/', host: 'lidl.de' },
+    { name: 'REWE', url: 'https://www.rewe.de/angebote/', host: 'rewe.de' },
+    { name: 'EDEKA', url: 'https://www.edeka.de/angebote/', host: 'edeka.de' },
+    { name: 'Kaufland', url: 'https://filiale.kaufland.de/angebote/uebersicht.html', host: 'kaufland.de' },
+    { name: 'Netto Marken-Discount', url: 'https://www.netto-online.de/filialangebote', host: 'netto-online.de' },
+    { name: 'PENNY', url: 'https://www.penny.de/angebote/', host: 'penny.de' }
+]);
+const OFFIZIELLE_HOSTS = HAENDLER.map(h => h.host);
+export function sichereAngebotsseite(wert) {
+    try {
+        const url = new URL(wert);
+        if (url.protocol !== 'https:' || url.username || url.password || url.port ||
+            !url.hostname.includes('.') || /^[\d.]+$/.test(url.hostname) || url.hostname.endsWith('.localhost')) return '';
+        return url.href;
+    } catch { return ''; }
+}
 const TREFFERARTEN = new Set(['genau', 'alternative']);
 
 const DEMO_MAERKTE = [
@@ -148,8 +166,9 @@ export function alsAngebotsauftrag(profil = demoAngebotsprofil()) {
         'Suche ausschließlich nach Angeboten, die zu den Artikeln im Profil passen. Andere Angebote verwerfen.',
         '',
         'Regeln:',
-        '1. Verwende nur öffentlich erreichbare, offizielle Seiten von aldi-nord.de, aldi-sued.de und rewe.de.',
+        `1. Verwende nur öffentlich erreichbare offizielle Händlerseiten: ${OFFIZIELLE_HOSTS.join(', ')}. Bei sonstigen Läden ausschließlich die im Eingabeprofil ausdrücklich hinterlegte Angebotsseite und deren Host. Ohne hinterlegte Seite keine Angebote für sonstige Läden erfinden.`,
         '2. Keine Anmeldung, keine App-Coupons hinter Login und keine Umgehung technischer Sperren.',
+        '   Übernimm haendler und markt im Ergebnis wortgleich aus dem Eingabeprofil; bei Sonstiger Laden steht der konkrete Name im Feld markt.',
         '3. Ordne nur plausible Treffer zu. Eine andere Marke ist erlaubt, muss aber als „alternative“ markiert werden.',
         '4. Übernimm Preis, Packungsgröße, Grundpreis, Gültigkeit und konkrete Quelle. Nichts erfinden.',
         '   Schreibe den Grundpreis als positive Zahl mit eindeutigem Nenner, zum Beispiel „0,99 €/l“, „1,49 €/kg“ oder „0,25 €/Stück“.',
@@ -170,7 +189,9 @@ function istText(wert, max = 300) {
 }
 
 function istDatum(wert) {
-    return /^\d{4}-\d{2}-\d{2}$/.test(wert) && !Number.isNaN(Date.parse(`${wert}T00:00:00Z`));
+    if (typeof wert !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(wert)) return false;
+    const datum = new Date(`${wert}T00:00:00Z`);
+    return Number.isFinite(datum.getTime()) && datum.toISOString().slice(0, 10) === wert;
 }
 
 function lokalerTag(datum) {
@@ -178,10 +199,12 @@ function lokalerTag(datum) {
     return `${datum.getFullYear()}-${zwei(datum.getMonth() + 1)}-${zwei(datum.getDate())}`;
 }
 
-function istOffizielleQuelle(wert) {
+function istOffizielleQuelle(wert, angebot, maerkte) {
     try {
         const adresse = new URL(wert);
-        if (adresse.protocol !== 'https:') return false;
+        if (!sichereAngebotsseite(wert)) return false;
+        const eigeneQuelle = maerkte.some(m => m.haendler === angebot.haendler && m.markt === angebot.markt && sichereAngebotsseite(m.angebotsseite) && new URL(m.angebotsseite).hostname === adresse.hostname);
+        if (eigeneQuelle) return true;
         return OFFIZIELLE_HOSTS.some(
             (host) => adresse.hostname === host || adresse.hostname.endsWith(`.${host}`)
         );
@@ -190,7 +213,7 @@ function istOffizielleQuelle(wert) {
     }
 }
 
-function istAngebotGueltig(angebot, version) {
+function istAngebotGueltig(angebot, version, maerkte) {
     if (!angebot || typeof angebot !== 'object') return false;
     if (!istText(angebot.artikelId, 100) || !istText(angebot.artikelName, 120)) return false;
     if (!istText(angebot.haendler, 80) || !istText(angebot.markt, 200)) return false;
@@ -208,10 +231,10 @@ function istAngebotGueltig(angebot, version) {
     if (angebot.gueltigVon > angebot.gueltigBis) return false;
     if (!TREFFERARTEN.has(angebot.treffer)) return false;
     if (typeof angebot.hinweis !== 'string' || angebot.hinweis.length > 300) return false;
-    return istOffizielleQuelle(angebot.quelle);
+    return istOffizielleQuelle(angebot.quelle, angebot, maerkte);
 }
 
-export function pruefeAngebotsergebnis(daten) {
+export function pruefeAngebotsergebnis(daten, maerkte = []) {
     if (!daten || typeof daten !== 'object') return { gueltig: false, grund: 'kaputt' };
     if (daten.typ !== ANGEBOTSERGEBNIS_TYP) return { gueltig: false, grund: 'fremd' };
     const version = Number(daten.version);
@@ -226,14 +249,14 @@ export function pruefeAngebotsergebnis(daten) {
     if (!Array.isArray(daten.angebote) || daten.angebote.length > 200) {
         return { gueltig: false, grund: 'kaputt' };
     }
-    if (!daten.angebote.every((angebot) => istAngebotGueltig(angebot, version))) {
+    if (!daten.angebote.every((angebot) => istAngebotGueltig(angebot, version, maerkte))) {
         return { gueltig: false, grund: 'kaputt' };
     }
     return { gueltig: true, grund: null };
 }
 
-export function aktiveAngebote(daten, heute = new Date()) {
-    if (!pruefeAngebotsergebnis(daten).gueltig) return [];
+export function aktiveAngebote(daten, heute = new Date(), maerkte = []) {
+    if (!pruefeAngebotsergebnis(daten, maerkte).gueltig) return [];
     const tag = lokalerTag(heute);
     return daten.angebote
         .filter((angebot) => angebot.gueltigVon <= tag && angebot.gueltigBis >= tag)
@@ -403,17 +426,17 @@ function markiereNiedrigsteGrundpreise(gruppen) {
     }
 }
 
-export function angeboteFuerArtikel(daten, artikelId, heute = new Date()) {
+export function angeboteFuerArtikel(daten, artikelId, heute = new Date(), maerkte = []) {
     return gruppiereAngebote(
-        aktiveAngebote(daten, heute).filter((angebot) => angebot.artikelId === artikelId)
+        aktiveAngebote(daten, heute, maerkte).filter((angebot) => angebot.artikelId === artikelId)
     );
 }
 
-export function angebotStatus(daten, heute = new Date()) {
-    if (!pruefeAngebotsergebnis(daten).gueltig) {
+export function angebotStatus(daten, heute = new Date(), maerkte = []) {
+    if (!pruefeAngebotsergebnis(daten, maerkte).gueltig) {
         return { vorhanden: false, erzeugt: null, angebote: 0, artikel: 0, gueltigBis: null };
     }
-    const gruppen = gruppiereAngebote(aktiveAngebote(daten, heute));
+    const gruppen = gruppiereAngebote(aktiveAngebote(daten, heute, maerkte));
     return {
         vorhanden: true,
         erzeugt: new Date(daten.erzeugt),

@@ -9,7 +9,7 @@
 import { t } from '../texte.js';
 import { VERSION } from '../version.js';
 import { kaufStatistik, datumDeutsch } from '../logik.js';
-import { angebotStatus, gruppiereAngebote, preisDeutsch } from '../angebotsradar.js';
+import { HAENDLER, sichereAngebotsseite, angebotStatus, gruppiereAngebote, preisDeutsch } from '../angebotsradar.js';
 import {
     zustand, alleArtikel, offeneEintraege, listeLeeren, allesZuruecksetzen,
     rezeptAnlegen, rezeptLoeschen, rezeptAufListe,
@@ -19,7 +19,7 @@ import {
 import { melde, zeigeBereich } from './schale.js';
 import { zeigeDialog, dialogFeld, schliesseDialog } from './dialog.js';
 import {
-    teileAlsDatei, kopiereListeAlsText, kopiereStammartikel, dateiEinlesen,
+    vollsicherungExportieren, vollsicherungEinlesen, teileAlsDatei, kopiereListeAlsText, kopiereStammartikel, dateiEinlesen,
     zeigeQrCode, linkEinlesen
 } from './teilen.js';
 import {
@@ -94,6 +94,7 @@ function knopf(text, wirkung, { betont = false, gefahr = false } = {}) {
 function ueberFoxi() {
     const abschnitt = karte(t('mehr.ueberTitel'));
     abschnitt.append(absatz(t('mehr.ueberText')));
+    abschnitt.append(absatz(t('mehr.updateHinweis'), 'muted small'));
     return abschnitt;
 }
 
@@ -324,7 +325,7 @@ async function reihenfolgeSichern(liste, { still = false } = {}) {
    ──────────────────────────────────────────────────────────────────────── */
 
 function teilenKarte() {
-    const abschnitt = karte(t('teilen.titel'), { experte: true });
+    const abschnitt = karte(t('teilen.titel'));
     abschnitt.append(absatz(t('teilen.erklaerung'), 'muted small'));
     abschnitt.append(knopfleiste(
         knopf(t('qr.knopf'), zeigeQrCode, { betont: true }),
@@ -334,6 +335,8 @@ function teilenKarte() {
         knopf(t('qr.linkEinfuegen'), linkEinlesen),
         knopf(t('teilen.importieren'), dateiEinlesen)
     ));
+    abschnitt.append(absatz(t('sicherung.hinweis'), 'muted small'));
+    abschnitt.append(knopfleiste(knopf(t('sicherung.exportieren'), vollsicherungExportieren), knopf(t('sicherung.wiederherstellen'), vollsicherungEinlesen)));
     abschnitt.append(absatz(t('teilen.langDrueckenHinweis'), 'muted small'));
     return abschnitt;
 }
@@ -400,7 +403,7 @@ function angebotsradarKarte() {
     }
 
     const daten = angebotsergebnis();
-    const status = angebotStatus(daten);
+    const status = angebotStatus(daten, new Date(), maerkte());
     if (status.vorhanden && status.angebote > 0) {
         abschnitt.append(absatz(
             t('angebote.statusAktuell', status.angebote, status.artikel, zeitpunktKurz(status.erzeugt), datumDeutsch(status.gueltigBis)),
@@ -474,22 +477,32 @@ function maerkteBereich() {
 function marktDialog() {
     const haendler = document.createElement('select');
     haendler.setAttribute('aria-label', t('angebote.haendler'));
-    for (const name of ['ALDI Nord', 'ALDI Süd', 'REWE']) {
+    for (const name of [...HAENDLER.map(h => h.name), t('angebote.sonstigerLaden')]) {
         const option = document.createElement('option'); option.value = name; option.textContent = name; haendler.append(option);
     }
     const filiale = dialogFeld({ platzhalter: t('angebote.marktPlatzhalter'), beschriftung: t('angebote.marktBeschriftung') });
+    const quelle = dialogFeld({ platzhalter: t('angebote.eigeneQuelle'), beschriftung: t('angebote.eigeneQuelle') });
+    quelle.type = 'url';
+    const auswahl = () => {
+        const sonstig = !HAENDLER.some(h => h.name === haendler.value);
+        filiale.placeholder = t(sonstig ? 'angebote.nameUndAdresse' : 'angebote.marktPlatzhalter');
+        filiale.setAttribute('aria-label', t(sonstig ? 'angebote.nameUndAdresse' : 'angebote.marktBeschriftung'));
+        quelle.value = HAENDLER.find(h => h.name === haendler.value)?.url || '';
+    };
+    haendler.addEventListener('change', auswahl);
+    auswahl();
     const sichern = async () => {
-        const defaults = { 'ALDI Nord': 'https://www.aldi-nord.de/angebote.html', 'ALDI Süd': 'https://www.aldi-sued.de/angebote', REWE: 'https://www.rewe.de/angebote/' };
-        const gespeichert = await marktSpeichern({ haendler: haendler.value, markt: filiale.value, angebotsseite: defaults[haendler.value] });
-        if (!gespeichert) { melde(t('angebote.marktFehlt')); return; }
+        if (quelle.value.trim() && !sichereAngebotsseite(quelle.value.trim())) { melde(t('angebote.quelleFehler')); return false; }
+        const gespeichert = await marktSpeichern({ haendler: haendler.value, markt: filiale.value, angebotsseite: quelle.value.trim() });
+        if (!gespeichert) { melde(t('angebote.marktFehlt')); return false; }
         schliesseDialog();
         melde(t('angebote.marktGespeichert'));
     };
     zeigeDialog({
         titel: t('angebote.marktHinzufuegen'),
         fokus: true,
-        koerper: [haendler, filiale, absatz(t('angebote.marktLokal'), 'muted small')],
-        knoepfe: [{ text: t('menge.fertig'), betont: true, wirkung: sichern }]
+        koerper: [haendler, filiale, quelle, absatz(t('angebote.quellenHinweis'), 'muted small'), absatz(t('angebote.marktLokal'), 'muted small')],
+        knoepfe: [{ text: t('menge.fertig'), betont: true, offenLassen: true, wirkung: sichern }]
     });
 }
 

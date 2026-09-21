@@ -47,10 +47,16 @@ export function initPwaUpdate() {
         if (neustartBegonnen) return;
         neustartBegonnen = true;
 
-        /* Normalerweise navigiert der neue Worker seine alten Fenster selbst.
-           Der kurze Rückfallweg schützt Browser, die WindowClient.navigate()
-           nicht oder verspätet ausführen. */
-        window.setTimeout(() => window.location.reload(), 250);
+        /* Reguläre Updates warten auf geschlossene Fenster. Falls ein Browser
+           trotzdem den Controller wechselt, bleibt ein offener Editor erhalten. */
+        const sicherNeuladen = () => {
+            if (document.querySelector('.dialog-auflage') || document.activeElement?.matches('input, textarea, select')) {
+                window.setTimeout(sicherNeuladen, 1000);
+                return;
+            }
+            window.location.reload();
+        };
+        window.setTimeout(sicherNeuladen, 250);
     });
 
     window.addEventListener('load', () => {

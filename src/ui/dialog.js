@@ -53,7 +53,7 @@ export function zeigeDialog({ titel, koerper = [], knoepfe = [], fokus = false }
         knopf.addEventListener('click', () => {
             /* Erst schließen, dann wirken: Eine Wirkung, die den Bildschirm
                neu zeichnet, soll nicht gegen einen offenen Dialog arbeiten. */
-            schliesseDialog();
+            if (!angabe.offenLassen) schliesseDialog();
             angabe.wirkung?.();
         });
         leiste.append(knopf);
