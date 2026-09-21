@@ -4,7 +4,7 @@
 ![Kein Konto](https://img.shields.io/badge/Kein%20Konto-kein%20Login%2C%20kein%20Backend-0f766e)
 ![PWA](https://img.shields.io/badge/PWA-offlinef%C3%A4hig-purple)
 ![MIT License](https://img.shields.io/badge/License-MIT-yellow)
-![Version](https://img.shields.io/badge/Version-0.11.0-orange)
+![Version](https://img.shields.io/badge/Version-0.12.0-orange)
 
 **Tippen statt Tippen.**
 
@@ -133,7 +133,7 @@ sichtbare Komplexität.
 | Rezepte | – | ✅ |
 | Kategorie-Reihenfolge ziehen | – | ✅ |
 | Teilen, Export und Import | – | ✅ |
-| Liste als QR-Code an ein anderes Gerät | – | ✅ |
+| Liste als QR-Code oder Link an ein anderes Gerät | – | ✅ |
 | Briefing-Export als Klartext | – | ✅ |
 | Stammartikel-Export | – | ✅ |
 | Wochenangebote mit KI | ✅ | ✅ |
@@ -163,6 +163,16 @@ Benachrichtigung; Foxi öffnet sich dort mit derselben Liste und fragt, was
 Die Daten stehen im Anker der Adresse – und alles hinter dem Rautezeichen
 schickt kein Browser zu irgendeinem Server. Ein Wocheneinkauf mit 25 Artikeln
 passt bequem in einen einzigen Code.
+
+**Unterwegs geht derselbe Inhalt als Link.** „Als Link senden" legt ihn in
+WhatsApp, Threema, Signal oder eine Mail – für den Fall, für den der QR-Code
+nichts taugt: Einer ist zu Hause, der andere im Laden.
+
+Am anderen Ende gehört dann **„Link einfügen"** dazu, und das ist kein
+Beiwerk: Ein angetippter Link öffnet den eingebauten Browser des Messengers,
+und der hat seinen eigenen Speicher – dort übernommen, wäre die Liste in der
+richtigen Foxi nie angekommen. Der Weg ist deshalb: Link kopieren, die eigene
+Foxi öffnen, einfügen.
 
 **Was nicht mitfährt:** Fotos (ein Produktfoto ist dreitausendmal so groß wie
 ein QR-Code fasst), die Kaufhistorie, die gelernten Mengen und dein Ort.
@@ -382,7 +392,7 @@ in den normalen Listenexport aufgenommen.
 
 ## Stand und was als Nächstes kommt
 
-**Gebaut (v0.11.0):** Version 1 ist inhaltlich vollständig – Basismodus,
+**Gebaut (v0.12.0):** Version 1 ist inhaltlich vollständig – Basismodus,
 lernender Katalog, Rezepte, Kategorie-Reihenfolge per Ziehen, Teilen als
 Datei mit Zusammenführung beim Import, Briefing-Export, Statistik,
 Offlinebetrieb, Installierbarkeit. Der geführte Angebotscheck verbindet Foxis

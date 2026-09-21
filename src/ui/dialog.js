@@ -88,8 +88,15 @@ export function zeigeDialog({ titel, koerper = [], knoepfe = [], fokus = false }
        `schale.js` holt ihn zurück). Der Fokus wandert trotzdem in den
        Dialog – auf den ersten Knopf –, damit Tastatur und Vorlesehilfe
        nicht hinter der Auflage weiterlaufen. */
+    /* Ohne Tippabsicht bekommt die **Karte** den Fokus, nicht der erste
+       Knopf. Der erste Knopf steht unten in der Leiste: Ihn zu fokussieren
+       rollt einen langen Dialog sofort ans Ende – die Überschrift stand dann
+       oberhalb des Sichtbaren, und man sah einen Bildschirm ohne Titel.
+       Die Karte ist per `tabindex="-1"` fokussierbar, ohne in die
+       Tabulatorreihenfolge zu geraten. */
+    karte.tabIndex = -1;
     const erstesFeld = fokus ? rumpf.querySelector('input, textarea') : null;
-    setTimeout(() => (erstesFeld || karte.querySelector('button'))?.focus(), 0);
+    setTimeout(() => (erstesFeld || karte).focus(), 0);
     return auflage;
 }
 

@@ -190,11 +190,13 @@ pruefe(await seite.locator('.dialog-titel').isVisible(),
 await seite.waitForTimeout(80);
 const fokusImBlatt = await seite.evaluate(() => ({
     marke: document.activeElement?.tagName || '',
-    imDialog: document.querySelector('.dialog')?.contains(document.activeElement) === true
+    imDialog: document.querySelector('.dialog')?.contains(document.activeElement) === true,
+    istDialog: document.activeElement?.classList.contains('dialog') === true
 }));
 pruefe(fokusImBlatt.marke !== 'INPUT' && fokusImBlatt.marke !== 'TEXTAREA',
     `Das Blatt öffnet keine Tastatur (Fokus: ${fokusImBlatt.marke || 'nichts'})`);
-pruefe(fokusImBlatt.imDialog, 'Der Fokus steht trotzdem im Dialog');
+pruefe(fokusImBlatt.imDialog || fokusImBlatt.istDialog,
+    'Der Fokus steht trotzdem im Dialog');
 
 /* Die zweite Hälfte desselben Problems: Unter 16 px zoomt iOS beim
    Hineintippen die Seite heran und nicht zuverlässig wieder heraus – danach
@@ -684,7 +686,7 @@ const listeVorQr = await seite.locator('#bereich-liste .listenkarte:not(.ist-erl
     .allTextContents();
 
 await seite.locator('#tab-mehr').tap();
-await seite.getByRole('button', { name: 'Liste als QR-Code zeigen', exact: true }).tap();
+await seite.getByRole('button', { name: 'Liste an ein anderes Gerät', exact: true }).tap();
 await seite.waitForSelector('.qr-bild');
 const qrBild = await seite.evaluate(() => {
     const bild = document.querySelector('.qr-bild');
@@ -698,6 +700,10 @@ const qrBild = await seite.evaluate(() => {
    ihn etwas herunter. */
 pruefe(qrBild.breite >= 200 && qrBild.anteil > 0.15 && qrBild.anteil < 0.6,
     `Der QR-Code ist gezeichnet (${qrBild.breite} px, ${Math.round(qrBild.anteil * 100)} % dunkel)`);
+/* Ein langer Dialog darf nicht schon beim Öffnen am Ende stehen: Der Fokus
+   gehört an den Anfang, sonst sieht man einen Bildschirm ohne Überschrift. */
+pruefe(await seite.locator('.dialog-titel').isVisible(),
+    'Der Dialog steht beim Öffnen oben, nicht am Ende');
 await seite.screenshot({ path: join(bilder, '18-qr-code.png') });
 
 /* Dieselbe Adresse, die im Bild steckt – über das Modul geholt, damit die
@@ -760,8 +766,62 @@ pruefe(fremdeAnfragenZwei.length === 0,
 await zweiteSeite.screenshot({ path: join(bilder, '19-qr-empfangen.png') });
 await zweitesGeraet.close();
 
-await seite.locator('.dialog-abbruch').tap();
-await seite.waitForTimeout(200);
+/* ── Derselbe Inhalt als Link ───────────────────────────────────────────────
+
+   Der Fall, für den der QR-Code nichts taugt: Einer ist zu Hause, der andere
+   im Laden. Ohne Systemdialog (wie hier im Kopflosen) fällt „Als Link senden"
+   auf die Zwischenablage zurück – geprüft wird, dass dort dieselbe Adresse
+   landet. */
+await seite.evaluate(() => navigator.clipboard.writeText('noch nichts'));
+await seite.locator('.dialog-knoepfe button.primary').tap();
+await seite.waitForTimeout(300);
+const ablage = await seite.evaluate(() => navigator.clipboard.readText());
+pruefe(ablage === qrAdresse, 'Der Knopf legt denselben Link in die Zwischenablage');
+
+/* Und die Gegenrichtung auf einem dritten Gerät: Link aus der Nachricht
+   kopieren, eigene Foxi öffnen, einfügen. Das ist der Weg, der den
+   eingebauten Browser eines Messengers umgeht – dessen eigener Speicher
+   wäre eine Sackgasse. */
+const drittesGeraet = await browser.newContext({
+    ...devices['iPhone 13'], isMobile: true, hasTouch: true,
+    permissions: ['clipboard-read', 'clipboard-write']
+});
+const dritteSeite = await drittesGeraet.newPage();
+dritteSeite.on('console', (nachricht) => {
+    if (nachricht.type() === 'error') fehlerAufDerSeite.push(`[Gerät 3] ${nachricht.text()}`);
+});
+dritteSeite.on('pageerror', (fehler) => fehlerAufDerSeite.push(`[Gerät 3] ${fehler}`));
+await dritteSeite.goto(ADRESSE, { waitUntil: 'networkidle' });
+await dritteSeite.waitForSelector('#liste-inhalt');
+await dritteSeite.evaluate((link) => navigator.clipboard.writeText(link), qrAdresse);
+await dritteSeite.locator('#modus-schalter .seg[data-modus="experte"]').tap();
+await dritteSeite.locator('#tab-mehr').tap();
+await dritteSeite.getByRole('button', { name: 'Link einfügen', exact: true }).tap();
+await dritteSeite.waitForSelector('.dialog');
+const dritterText = await dritteSeite.locator('.dialog-koerper').textContent();
+pruefe(/neue[rn]? Artikel/.test(dritterText || ''),
+    `Ein eingefügter Link fragt ebenso vor dem Übernehmen (${dritterText?.trim()})`);
+await dritteSeite.locator('.dialog-knoepfe button').first().tap();
+await dritteSeite.locator('#tab-liste').tap();
+await dritteSeite.waitForSelector('#bereich-liste .listenkarte');
+const listeAusLink = await dritteSeite.locator('#bereich-liste .karte-name').allTextContents();
+pruefe(listeVorQr.every((name) => listeAusLink.includes(name)),
+    `Dieselbe Liste kommt auch über den Link an (${listeAusLink.length} von ${listeVorQr.length})`);
+await drittesGeraet.close();
+
+/* Ein Text ohne Foxi-Liste darf nicht stillschweigend etwas tun. */
+await seite.locator('#tab-mehr').tap();
+await seite.evaluate(() => navigator.clipboard.writeText('https://example.org/irgendwas'));
+await seite.getByRole('button', { name: 'Link einfügen', exact: true }).tap();
+await seite.waitForSelector('.dialog input');
+await seite.locator('.dialog input').fill('https://example.org/ohne-liste');
+await seite.locator('.dialog-knoepfe button.primary').tap();
+await seite.waitForTimeout(250);
+pruefe((await seite.locator('#toast').textContent())?.includes('keine EinkaufsFuchs-Liste'),
+    'Ein Link ohne Liste sagt das und tut nichts');
+/* Der Dialog schließt sich selbst, sobald ein Knopf gewirkt hat – hier ist
+   also nichts mehr wegzuräumen. */
+pruefe(await seite.locator('.dialog').count() === 0, 'Danach steht kein Dialog mehr offen');
 
 /* ── Experte: Teilen und Einlesen ───────────────────────────────────────── */
 const fremdeListe = {

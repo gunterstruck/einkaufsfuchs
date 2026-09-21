@@ -25,7 +25,7 @@ import {
 import { qrErzeugen, qrZeichnen } from '../qrcode.js';
 import { zustand, offeneEintraege, importAnwenden, alleArtikel, ort } from '../zustand.js';
 import { melde } from './schale.js';
-import { zeigeDialog, dialogZeile } from './dialog.js';
+import { zeigeDialog, dialogZeile, dialogFeld } from './dialog.js';
 
 /* ────────────────────────────────────────────────────────────────────────
    Hinaus
@@ -206,10 +206,96 @@ export async function zeigeQrCode() {
             rahmen,
             dialogZeile(t('qr.artikelZahl', eintraege.length), 'qr-zahl'),
             dialogZeile(t('qr.erklaerung'), 'muted small'),
+            dialogZeile(t('qr.linkGegenseite'), 'muted small'),
             dialogZeile(t('qr.ohneFotos'), 'muted small')
         ],
-        knoepfe: []
+        knoepfe: [{ text: t('qr.linkSenden'), betont: true, wirkung: teileQrLink }]
     });
+}
+
+/**
+ * Derselbe Inhalt, anderer Weg: der Link in eine Nachricht.
+ *
+ * Für den Fall, für den der QR-Code nichts taugt – der eine ist zu Hause,
+ * der andere im Laden. Bildschirm-an-Kamera setzt denselben Raum voraus;
+ * genau dann braucht man es am wenigsten.
+ *
+ * Die Liste steht **im** Link. Das ist dieselbe Kategorie wie die Datei, die
+ * Foxi schon heute per Messenger teilt: Ein Mensch entscheidet und schickt.
+ * Was der Messenger für die Vorschau holt, ist nur die App-Adresse – den
+ * Teil hinter der Raute bekommt kein Server zu sehen.
+ */
+export async function teileQrLink() {
+    const adresse = await aktuelleQrAdresse();
+    if (!adresse) { melde(t('teilen.leerNichtsZuTeilen')); return; }
+
+    if (navigator.share) {
+        try {
+            /* `url` statt `text`: Messenger und die iOS-Teilen-Auswahl
+               behandeln einen Link dann als Link. */
+            await navigator.share({ title: t('app.name'), url: adresse });
+            melde(t('teilen.geteilt'));
+            return;
+        } catch (fehler) {
+            if (fehler?.name === 'AbortError') { melde(t('teilen.abgebrochen')); return; }
+        }
+    }
+    await kopiereText(adresse, t('qr.linkKopiert'), t('qr.titel'));
+}
+
+/**
+ * Die Gegenrichtung – und der Grund, warum es sie geben muss.
+ *
+ * Ein angetippter Link in einer Nachricht öffnet den eingebauten Browser des
+ * Messengers. Der hat seinen eigenen Speicher: Dort übernommen, wäre die
+ * Liste in der richtigen Foxi nie angekommen. Deshalb der Weg von Hand –
+ * Link kopieren, eigene Foxi öffnen, hier einfügen.
+ *
+ * Erst wird die Zwischenablage gefragt; geht das nicht (Safari ohne Geste,
+ * Firefox, verweigerte Berechtigung), fragt Foxi den Menschen.
+ */
+export async function linkEinlesen() {
+    try {
+        const ablage = await navigator.clipboard.readText();
+        if (await linkUebernehmen(ablage)) return;
+    } catch {
+        /* Keine Zwischenablage: dann eben das Feld. */
+    }
+
+    const feld = dialogFeld({
+        platzhalter: t('qr.linkPlatzhalter'),
+        beschriftung: t('qr.linkTitel'),
+        bestaetigen: (wert) => linkUebernehmen(wert, true)
+    });
+    zeigeDialog({
+        titel: t('qr.linkTitel'),
+        fokus: true,
+        koerper: [feld, dialogZeile(t('qr.linkHinweis'), 'muted small')],
+        knoepfe: [{
+            text: t('qr.linkUebernehmen'),
+            betont: true,
+            wirkung: () => linkUebernehmen(feld.value, true)
+        }]
+    });
+}
+
+/**
+ * Aus einem eingefügten Text eine Liste machen.
+ *
+ * Der Ursprung im Link ist absichtlich egal: Ein Link von einer anderen
+ * Adresse derselben App – nach einem Umzug, aus einer älteren Nachricht –
+ * trägt dieselben Daten hinter der Raute. Geprüft wird der Inhalt, nicht die
+ * Herkunft; übernommen wird auch hier erst nach dem Dialog.
+ */
+async function linkUebernehmen(text, meldenWennNichts = false) {
+    const roh = String(text || '');
+    const raute = roh.indexOf('#');
+    const anteil = raute < 0 ? null : qrAnteilAusAdresse(roh.slice(raute));
+    if (!anteil) {
+        if (meldenWennNichts) melde(t('qr.linkKeineListe'));
+        return false;
+    }
+    return anteilUebernehmen(anteil);
 }
 
 /**
@@ -226,7 +312,11 @@ export async function qrAusAdresseUebernehmen(ort = window.location) {
     const anteil = qrAnteilAusAdresse(ort?.hash);
     if (!anteil) return false;
     ankerEntfernen(ort);
+    return anteilUebernehmen(anteil);
+}
 
+/** Der gemeinsame Rest beider Empfangswege: prüfen, dann fragen. */
+async function anteilUebernehmen(anteil) {
     const pruefung = await pruefeQrListe(anteil);
     if (!pruefung.gueltig) {
         const hinweis = { mehrteilig: 'qr.mehrteilig', zuAlt: 'qr.zuAlt' }[pruefung.grund] || 'qr.ungueltig';
@@ -234,8 +324,8 @@ export async function qrAusAdresseUebernehmen(ort = window.location) {
         return false;
     }
     /* Von hier an derselbe Weg wie beim Datei-Import: dieselbe Prüfung,
-       derselbe Dialog, dieselbe Übernahme. Ein QR-Code ist ein anderer
-       Transportweg, keine zweite Wahrheit. */
+       derselbe Dialog, dieselbe Übernahme. QR-Code und Link sind andere
+       Transportwege, keine zweite Wahrheit. */
     zeigeZusammenfuehrung({
         typ: DATEI_TYP,
         version: DATEI_VERSION,
