@@ -393,6 +393,31 @@ body:not(.modus-experte) .experte-nur { display: none !important; }
 }
 .produktfoto-aktionen button { flex: 1 1 145px; }
 
+/* Der QR-Code ──────────────────────────────────────────────────────────────
+
+   Schwarz auf Weiß, mit weißem Rand, unabhängig vom Farbschema: Eine Kamera
+   sucht genau diesen Kontrast. Das Bild wird bewusst hart hochskaliert
+   (`pixelated`) – weichgezeichnete Modulkanten sind der häufigste Grund,
+   warum ein Code auf einem hochauflösenden Bildschirm nicht gelesen wird. */
+.qr-rahmen {
+    display: flex;
+    justify-content: center;
+    padding: 10px;
+    background: #ffffff;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-m);
+}
+.qr-bild {
+    width: 100%;
+    max-width: 360px;
+    height: auto;
+    image-rendering: pixelated;
+}
+.qr-zahl {
+    text-align: center;
+    font-weight: 700;
+}
+
 /* Artikelblatt ───────────────────────────────────────────────────────────
 
    Das Blatt steht im Dialog. Es erbt dessen Breite und Rollverhalten; hier

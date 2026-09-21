@@ -671,6 +671,98 @@ pruefe(await seite.locator('.kachel').first().evaluate((el) => !el.classList.con
     'Langes Drücken legt den Artikel nicht zusätzlich auf die Liste');
 await seite.locator('#katalog-suche').fill('');
 
+/* ── Die Liste als QR-Code, von Gerät zu Gerät ──────────────────────────────
+
+   Der einzige Weg in Foxi, der ohne Datei und ohne Zwischenablage auskommt.
+   Geprüft wird er deshalb auch als echter Rundlauf: Das erste Gerät erzeugt
+   den Code, ein **zweiter Browserkontext** – eigene Datenbank, eigener
+   Speicher, also ein anderes Gerät – öffnet die darin steckende Adresse und
+   muss dieselbe Liste bekommen. */
+await seite.locator('#tab-liste').tap();
+await seite.waitForSelector('#bereich-liste .listenkarte');
+const listeVorQr = await seite.locator('#bereich-liste .listenkarte:not(.ist-erledigt) .karte-name')
+    .allTextContents();
+
+await seite.locator('#tab-mehr').tap();
+await seite.getByRole('button', { name: 'Liste als QR-Code zeigen', exact: true }).tap();
+await seite.waitForSelector('.qr-bild');
+const qrBild = await seite.evaluate(() => {
+    const bild = document.querySelector('.qr-bild');
+    const punkte = bild.getContext('2d').getImageData(0, 0, bild.width, bild.height).data;
+    let dunkel = 0;
+    for (let i = 0; i < punkte.length; i += 4) if (punkte[i] < 128) dunkel++;
+    return { breite: bild.width, anteil: dunkel / (bild.width * bild.height) };
+});
+/* Ein leeres oder vollflächiges Bild wäre auch „gezeichnet". Ein echter
+   QR-Code liegt bei ungefähr der Hälfte dunkler Module, der helle Rand zieht
+   ihn etwas herunter. */
+pruefe(qrBild.breite >= 200 && qrBild.anteil > 0.15 && qrBild.anteil < 0.6,
+    `Der QR-Code ist gezeichnet (${qrBild.breite} px, ${Math.round(qrBild.anteil * 100)} % dunkel)`);
+await seite.screenshot({ path: join(bilder, '18-qr-code.png') });
+
+/* Dieselbe Adresse, die im Bild steckt – über das Modul geholt, damit die
+   Prüfstrecke keinen Testzugang im Auslieferungsstand braucht. */
+const qrAdresse = await seite.evaluate(async () => {
+    const modul = await import('./src/ui/teilen.js');
+    return modul.aktuelleQrAdresse();
+});
+pruefe(qrAdresse.startsWith(ADRESSE) && /#lz?=/.test(qrAdresse),
+    `Die Adresse trägt die Liste hinter der Raute (${qrAdresse.length} Zeichen)`);
+/* Alles vor der Raute geht zum Server, alles dahinter nie. Deshalb darf vor
+   der Raute nichts aus der Liste stehen. */
+pruefe(qrAdresse.slice(0, qrAdresse.indexOf('#')) === ADRESSE,
+    'Vor der Raute steht nichts als die App-Adresse');
+
+/* Nicht die verpackte Zeichenkette absuchen – die ist gepackt und enthielte
+   ohnehin nichts Lesbares. Geprüft wird der **entpackte** Inhalt. */
+const qrInhalt = await seite.evaluate(async (adresse) => {
+    const modul = await import('./src/qrliste.js');
+    const pruefung = await modul.pruefeQrListe(
+        modul.qrAnteilAusAdresse(adresse.slice(adresse.indexOf('#')))
+    );
+    return { gueltig: pruefung.gueltig, text: JSON.stringify(pruefung.daten) };
+}, qrAdresse);
+pruefe(qrInhalt.gueltig && !qrInhalt.text.includes('data:image') &&
+    !/letzteKaeufe|letzteMengen|zaehler|angebot/i.test(qrInhalt.text),
+    'Weder Foto noch Kaufhistorie noch Angebote fahren mit');
+
+const zweitesGeraet = await browser.newContext({
+    ...devices['iPhone 13'], isMobile: true, hasTouch: true
+});
+const zweiteSeite = await zweitesGeraet.newPage();
+const fremdeAnfragenZwei = [];
+zweiteSeite.on('request', (anfrage) => {
+    if (!anfrage.url().startsWith(ADRESSE.slice(0, -1))) fremdeAnfragenZwei.push(anfrage.url());
+});
+zweiteSeite.on('console', (nachricht) => {
+    if (nachricht.type() === 'error') fehlerAufDerSeite.push(`[Gerät 2] ${nachricht.text()}`);
+});
+zweiteSeite.on('pageerror', (fehler) => fehlerAufDerSeite.push(`[Gerät 2] ${fehler}`));
+
+await zweiteSeite.goto(qrAdresse, { waitUntil: 'networkidle' });
+await zweiteSeite.waitForSelector('.dialog');
+const frageText = await zweiteSeite.locator('.dialog-koerper').textContent();
+pruefe(/neue[rn]? Artikel/.test(frageText || ''),
+    `Das zweite Gerät fragt erst, bevor es übernimmt (${frageText?.trim()})`);
+
+await zweiteSeite.locator('.dialog-knoepfe button').first().tap();
+await zweiteSeite.waitForSelector('#bereich-liste .listenkarte');
+const listeDanach = await zweiteSeite.locator('#bereich-liste .karte-name').allTextContents();
+pruefe(listeVorQr.length > 0 && listeVorQr.every((name) => listeDanach.includes(name)),
+    `Dieselbe Liste steht auf dem zweiten Gerät (${listeDanach.length} von ${listeVorQr.length})`);
+pruefe(await zweiteSeite.locator('.karte-produktfoto').count() === 0,
+    'Auf dem zweiten Gerät ist kein Produktfoto angekommen');
+/* Sonst führte jedes Neuladen denselben Import noch einmal vor – und die
+   Liste eines fremden Haushalts bliebe in der Adresszeile stehen. */
+pruefe(!zweiteSeite.url().includes('#l='), 'Der Anker ist nach dem Lesen aus der Adresse verschwunden');
+pruefe(fremdeAnfragenZwei.length === 0,
+    `Auch das zweite Gerät fragt keine fremde Adresse${fremdeAnfragenZwei.length ? `: ${fremdeAnfragenZwei.join(', ')}` : ''}`);
+await zweiteSeite.screenshot({ path: join(bilder, '19-qr-empfangen.png') });
+await zweitesGeraet.close();
+
+await seite.locator('.dialog-abbruch').tap();
+await seite.waitForTimeout(200);
+
 /* ── Experte: Teilen und Einlesen ───────────────────────────────────────── */
 const fremdeListe = {
     typ: 'foxi-liste',

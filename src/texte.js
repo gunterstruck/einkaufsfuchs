@@ -159,6 +159,31 @@ const DE = {
             n === 1 ? '1 Stammartikel in der Zwischenablage' : `${n} Stammartikel in der Zwischenablage`
     },
 
+    /**
+     * Der QR-Code: Bildschirm zeigt, Kamera liest.
+     *
+     * Die Texte sagen ausdrücklich, was **nicht** mitfährt. Wer eine Liste
+     * weitergibt, soll wissen, was er weitergibt – und was nicht.
+     */
+    qr: {
+        knopf: 'Liste als QR-Code zeigen',
+        titel: 'Liste als QR-Code',
+        erklaerung:
+            'Halte die Kamera des anderen Geräts darauf – die gewöhnliche Kamera-App genügt. ' +
+            'Sie öffnet Foxi mit dieser Liste. Es wird nichts verschickt und nichts gespeichert.',
+        ohneFotos: 'Fotos, Kaufhistorie und dein Ort fahren nicht mit.',
+        artikelZahl: (n) => (n === 1 ? '1 Artikel' : `${n} Artikel`),
+        bildBeschriftung: (n) =>
+            n === 1 ? 'QR-Code mit 1 Artikel' : `QR-Code mit ${n} Artikeln`,
+        zuLang: 'Diese Liste ist zu lang für einen QR-Code. Teile sie als Datei.',
+        ungueltig: 'Dieser Link enthält keine gültige EinkaufsFuchs-Liste.',
+        zuAlt: 'Dieses Gerät ist zu alt für gepackte Codes. Teilt die Liste als Datei.',
+        /* Foxi erzeugt heute immer einen einzigen Code. Die Teilmarke steht
+           trotzdem im Format – und dieser Satz für den Tag, an dem ein
+           anderer Stand zwei Codes schickt. */
+        mehrteilig: 'Dieser Code gehört zu einer mehrteiligen Liste. Diese Fassung liest nur einteilige.'
+    },
+
     ort: {
         titel: 'Dein Ort',
         erklaerung:

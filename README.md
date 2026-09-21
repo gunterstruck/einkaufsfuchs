@@ -4,7 +4,7 @@
 ![Kein Konto](https://img.shields.io/badge/Kein%20Konto-kein%20Login%2C%20kein%20Backend-0f766e)
 ![PWA](https://img.shields.io/badge/PWA-offlinef%C3%A4hig-purple)
 ![MIT License](https://img.shields.io/badge/License-MIT-yellow)
-![Version](https://img.shields.io/badge/Version-0.10.0-orange)
+![Version](https://img.shields.io/badge/Version-0.11.0-orange)
 
 **Tippen statt Tippen.**
 
@@ -133,6 +133,7 @@ sichtbare Komplexität.
 | Rezepte | – | ✅ |
 | Kategorie-Reihenfolge ziehen | – | ✅ |
 | Teilen, Export und Import | – | ✅ |
+| Liste als QR-Code an ein anderes Gerät | – | ✅ |
 | Briefing-Export als Klartext | – | ✅ |
 | Stammartikel-Export | – | ✅ |
 | Wochenangebote mit KI | ✅ | ✅ |
@@ -143,6 +144,28 @@ Der Wechsel ist jederzeit und **verlustfrei** möglich, und zwar wörtlich: Er
 berührt genau einen Wert in den Einstellungen. Eine Menge, die im
 Expertenmodus entstanden ist, steht in der Datenbank weiter – Basis zeigt sie
 nur nicht an. Wer zurückschaltet, findet sie unverändert wieder.
+
+---
+
+## Die Liste als QR-Code
+
+Von Gerät zu Gerät, ohne Datei und ohne Zwischenablage: **Bildschirm zeigt,
+Kamera liest.**
+
+![QR-Code](docs/bilder/18-qr-code.png)
+
+Unter *Mehr → Teilen und Sichern* zeigt Foxi die offene Liste als QR-Code –
+am Schreibtisch, auf dem Tablet oder von einem Handy zum anderen. Das andere
+Gerät hält einfach seine **gewöhnliche Kamera-App** darauf und tippt auf die
+Benachrichtigung; Foxi öffnet sich dort mit derselben Liste und fragt, was
+übernommen werden soll. Einen Scanner braucht es nicht.
+
+Die Daten stehen im Anker der Adresse – und alles hinter dem Rautezeichen
+schickt kein Browser zu irgendeinem Server. Ein Wocheneinkauf mit 25 Artikeln
+passt bequem in einen einzigen Code.
+
+**Was nicht mitfährt:** Fotos (ein Produktfoto ist dreitausendmal so groß wie
+ein QR-Code fasst), die Kaufhistorie, die gelernten Mengen und dein Ort.
 
 ---
 
@@ -307,7 +330,7 @@ sich die lernende Sortierung – und später die Rhythmus-Erkennung.
 
 | Funktion | Grund |
 |---|---|
-| QR-Code-Sync | Kapazitätsgrenze ~1 KB, Aufwand steht in keinem Verhältnis |
+| ~~QR-Code-Sync~~ | **Gebaut in 0.11.0** – siehe „Die Liste als QR-Code". Die alte Begründung stimmte für das alte Format |
 | Barcode-Scan | Safari/iOS unterstützt `BarcodeDetector` nicht; eine Produktdatenbank wäre ein Netzwerk-Request |
 | Kassenbon-OCR | Thermopapier ist der Worst Case für OCR; die Kaufhistorie entsteht ohnehin beim Abhaken |
 | Spracheingabe | Die Web Speech API sendet Audio an Google/Apple – bricht den Grundsatz |
@@ -359,7 +382,7 @@ in den normalen Listenexport aufgenommen.
 
 ## Stand und was als Nächstes kommt
 
-**Gebaut (v0.10.0):** Version 1 ist inhaltlich vollständig – Basismodus,
+**Gebaut (v0.11.0):** Version 1 ist inhaltlich vollständig – Basismodus,
 lernender Katalog, Rezepte, Kategorie-Reihenfolge per Ziehen, Teilen als
 Datei mit Zusammenführung beim Import, Briefing-Export, Statistik,
 Offlinebetrieb, Installierbarkeit. Der geführte Angebotscheck verbindet Foxis

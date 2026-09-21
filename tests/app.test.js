@@ -45,6 +45,11 @@ vi.mock('../src/ui/mehr.js', () => ({
     zeichneMehr: doppel.zeichneMehr
 }));
 
+/* Seit dem QR-Code hängt `app.js` auch am Teilen-Modul: Es liest beim
+   Start den Adressanker. Hier steht nur ein Doppel – geprüft wird der Weg
+   in `tests/qrliste.test.js` und im Durchlauf. */
+vi.mock('../src/ui/teilen.js', () => ({ qrAusAdresseUebernehmen: vi.fn(async () => false) }));
+
 vi.mock('../src/pwa-update.js', () => ({ initPwaUpdate: vi.fn() }));
 
 async function wechsleZu(bereich) {

@@ -16,8 +16,13 @@ import { t } from '../texte.js';
 import {
     alsAustauschdatei, alsKlartext, alsStammartikelText, kaufStatistik,
     gruppiereListe, pruefeAustauschdatei, vergleicheImport, datumFuerDateiname,
-    AUSTAUSCHDATEI_GRENZEN
+    AUSTAUSCHDATEI_GRENZEN, DATEI_TYP, DATEI_VERSION
 } from '../logik.js';
+import {
+    alsQrNutzlast, qrAdresse, eigenerUrsprung, qrAnteilAusAdresse,
+    pruefeQrListe, alsImportartikel, QR_SCHLUESSEL, QR_SCHLUESSEL_GEPACKT
+} from '../qrliste.js';
+import { qrErzeugen, qrZeichnen } from '../qrcode.js';
 import { zustand, offeneEintraege, importAnwenden, alleArtikel, ort } from '../zustand.js';
 import { melde } from './schale.js';
 import { zeigeDialog, dialogZeile } from './dialog.js';
@@ -148,6 +153,105 @@ export async function kopiereText(text, erfolgsmeldung, dialogTitel = t('teilen.
         knoepfe: []
     });
     setTimeout(() => { feld.focus(); feld.select(); }, 0);
+}
+
+/* ────────────────────────────────────────────────────────────────────────
+   Der QR-Code
+
+   Der einzige Weg in Foxi, der ohne Datei und ohne Zwischenablage von einem
+   Gerät zum anderen führt: Bildschirm zeigt, Kamera liest. Was dabei
+   übertragen wird und warum keine Fotos mitfahren, steht in `qrliste.js`.
+   ──────────────────────────────────────────────────────────────────────── */
+
+/**
+ * Die Adresse, die gerade im QR-Code stünde. Getrennt von der Anzeige, weil
+ * die Prüfstrecke damit den ganzen Weg nachfahren kann: erzeugen, die
+ * Adresse auf einem zweiten Gerät öffnen, Liste vergleichen.
+ */
+export async function aktuelleQrAdresse() {
+    const eintraege = offeneEintraege();
+    if (eintraege.length === 0) return '';
+    return qrAdresse(alsQrNutzlast(eintraege, zustand.artikel), eigenerUrsprung());
+}
+
+export async function zeigeQrCode() {
+    const eintraege = offeneEintraege();
+    if (eintraege.length === 0) { melde(t('teilen.leerNichtsZuTeilen')); return; }
+
+    let code;
+    const adresse = await aktuelleQrAdresse();
+    try {
+        /* Stufe L: Bildschirm → Kamera ist ein sauberer Kanal ohne Knicke und
+           Kaffeeflecken. Höhere Fehlerkorrektur kostete hier nur Kapazität
+           und damit ein dichteres Bild. */
+        code = qrErzeugen(adresse, { stufe: 'L' });
+    } catch {
+        melde(t('qr.zuLang'));
+        return;
+    }
+
+    const bild = document.createElement('canvas');
+    bild.className = 'qr-bild';
+    qrZeichnen(bild, code, 360);
+    bild.setAttribute('role', 'img');
+    bild.setAttribute('aria-label', t('qr.bildBeschriftung', eintraege.length));
+
+    const rahmen = document.createElement('div');
+    rahmen.className = 'qr-rahmen';
+    rahmen.append(bild);
+
+    zeigeDialog({
+        titel: t('qr.titel'),
+        koerper: [
+            rahmen,
+            dialogZeile(t('qr.artikelZahl', eintraege.length), 'qr-zahl'),
+            dialogZeile(t('qr.erklaerung'), 'muted small'),
+            dialogZeile(t('qr.ohneFotos'), 'muted small')
+        ],
+        knoepfe: []
+    });
+}
+
+/**
+ * Eine Liste aus der Adresse übernehmen – der Empfangsweg.
+ *
+ * Aufgerufen beim Start und bei jeder Änderung des Adressankers, denn ein
+ * zweiter Scan ändert nur den Anker und lädt die Seite nicht neu.
+ *
+ * Der Anker wird danach **immer** entfernt, auch wenn nichts übernommen
+ * wurde: Sonst führte jedes Neuladen denselben Import noch einmal vor, und
+ * die Liste eines anderen Haushalts bliebe in der Adresszeile stehen.
+ */
+export async function qrAusAdresseUebernehmen(ort = window.location) {
+    const anteil = qrAnteilAusAdresse(ort?.hash);
+    if (!anteil) return false;
+    ankerEntfernen(ort);
+
+    const pruefung = await pruefeQrListe(anteil);
+    if (!pruefung.gueltig) {
+        const hinweis = { mehrteilig: 'qr.mehrteilig', zuAlt: 'qr.zuAlt' }[pruefung.grund] || 'qr.ungueltig';
+        melde(t(hinweis));
+        return false;
+    }
+    /* Von hier an derselbe Weg wie beim Datei-Import: dieselbe Prüfung,
+       derselbe Dialog, dieselbe Übernahme. Ein QR-Code ist ein anderer
+       Transportweg, keine zweite Wahrheit. */
+    zeigeZusammenfuehrung({
+        typ: DATEI_TYP,
+        version: DATEI_VERSION,
+        artikel: alsImportartikel(pruefung.daten)
+    });
+    return true;
+}
+
+function ankerEntfernen(ort) {
+    const eigene = [QR_SCHLUESSEL, QR_SCHLUESSEL_GEPACKT];
+    const rest = String(ort.hash || '').replace(/^#/, '')
+        .split('&')
+        .filter((stueck) => !eigene.includes(stueck.slice(0, stueck.indexOf('='))))
+        .join('&');
+    const neu = `${ort.pathname}${ort.search}${rest ? `#${rest}` : ''}`;
+    window.history?.replaceState?.(null, '', neu);
 }
 
 /* ────────────────────────────────────────────────────────────────────────

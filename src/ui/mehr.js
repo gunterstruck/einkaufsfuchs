@@ -19,7 +19,7 @@ import {
 import { melde, zeigeBereich } from './schale.js';
 import { zeigeDialog, dialogFeld, schliesseDialog } from './dialog.js';
 import {
-    teileAlsDatei, kopiereListeAlsText, kopiereStammartikel, dateiEinlesen
+    teileAlsDatei, kopiereListeAlsText, kopiereStammartikel, dateiEinlesen, zeigeQrCode
 } from './teilen.js';
 import {
     aktuelleAngebote, rechercheAuftragKopieren, ergebnisEinfuegen,
@@ -326,7 +326,8 @@ function teilenKarte() {
     const abschnitt = karte(t('teilen.titel'), { experte: true });
     abschnitt.append(absatz(t('teilen.erklaerung'), 'muted small'));
     abschnitt.append(knopfleiste(
-        knopf(t('teilen.alsDatei'), teileAlsDatei, { betont: true }),
+        knopf(t('qr.knopf'), zeigeQrCode, { betont: true }),
+        knopf(t('teilen.alsDatei'), teileAlsDatei),
         knopf(t('teilen.alsText'), kopiereListeAlsText),
         knopf(t('teilen.stammartikel'), kopiereStammartikel),
         knopf(t('teilen.importieren'), dateiEinlesen)

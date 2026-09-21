@@ -40,18 +40,24 @@ grep -rn "\.style\.\|innerHTML\|<style\|style=" src/ index.html | grep -v "^src/
 | Zustand + IndexedDB | `src/zustand.js`, `src/db.js` |
 | Die drei Bildschirme | `src/ui/liste.js`, `katalog.js`, `mehr.js` |
 | Artikelblatt (Details je Artikel) | `src/ui/artikelblatt.js` |
+| QR-Code: Erzeuger und Format | `src/qrcode.js`, `src/qrliste.js` |
 
-Zwei Bezeichner dürfen **nie** umbenannt werden, auch wenn sie alt aussehen:
-`DB_NAME` in `db.js` (sonst verlieren alle Installationen ihre Daten) und
+Drei Bezeichner dürfen **nie** umbenannt werden, auch wenn sie alt aussehen:
+`DB_NAME` in `db.js` (sonst verlieren alle Installationen ihre Daten),
 `DATEI_TYP` in `logik.js` (sonst weist die App ihre eigenen älteren Dateien
-ab).
+ab) und `QR_TYP` in `qrliste.js` (dasselbe für erzeugte QR-Codes).
+
+**`src/qrcode.js` ist gegen eine unabhängige Umsetzung geprüft.** Wer dort
+etwas ändert, muss `tests/qr.test.js` grün halten: Es vergleicht das Bild
+Modul für Modul über alle 25 Versionen. Ein „etwas anderer" QR-Code ist kein
+QR-Code mehr.
 
 ## Loslegen und prüfen
 
 ```bash
 npm run dev                 # http://localhost:8080 – ohne npm install
-npm install && npm test     # 112 Unit-Tests
-node tools/durchlauf.mjs    # 84 Prüfungen im echten Browser + Bilder
+npm install && npm test     # 191 Unit-Tests
+node tools/durchlauf.mjs    # 93 Prüfungen im echten Browser + Bilder
 ```
 
 Für die Prüfstrecke einmalig:
