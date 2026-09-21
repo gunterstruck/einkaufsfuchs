@@ -13,6 +13,7 @@ import {
 import { listeVerdrahten, zeichneListe } from './ui/liste.js';
 import { katalogVerdrahten, zeichneKatalog, synchronisiereKacheln } from './ui/katalog.js';
 import { mehrVerdrahten, zeichneMehr } from './ui/mehr.js';
+import { qrAusAdresseUebernehmen } from './ui/teilen.js';
 import { initPwaUpdate } from './pwa-update.js';
 
 /* Welcher Bildschirm ist gegenüber dem Zustand veraltet? Ein Bereich, den
@@ -121,6 +122,14 @@ async function los() {
     zeigeBereich('liste');
     zeichneWennSichtbar();
     tageswechselVerdrahten();
+
+    /* Eine gescannte Liste steht im Anker der Adresse. Erst hier, nach dem
+       Laden des eigenen Zustands – der Zusammenführungs-Dialog muss ja
+       zeigen können, was sich gegenüber der vorhandenen Liste ändert.
+       `hashchange` kommt dazu, weil ein zweiter Scan bei geöffneter App nur
+       den Anker ändert und die Seite nicht neu lädt. */
+    qrAusAdresseUebernehmen();
+    window.addEventListener('hashchange', () => qrAusAdresseUebernehmen());
 }
 
 los().catch((fehler) => {

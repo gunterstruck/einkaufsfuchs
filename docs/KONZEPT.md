@@ -496,6 +496,106 @@ Bildschirmgrößen.
 
 ---
 
+## 7b. Die Liste als QR-Code
+
+Der einzige Weg in Foxi, der ohne Datei und ohne Zwischenablage von einem
+Gerät zum anderen führt: **Bildschirm zeigt, Kamera liest.** Kein Netz, kein
+Konto, kein Server.
+
+### Warum das früher „nicht machbar" hieß
+
+In Kapitel 9 stand QR-Sync jahrelang unter „bewusst nicht gebaut", Begründung:
+*Kapazitätsgrenze ~1 KB.* Das stimmte – für das Format, das Foxi beim Teilen
+als Datei benutzt. Gemessen, jeweils als fertige Adresse im Code:
+
+| Liste | Austauschformat der Datei | QR-Code |
+|---|---|---|
+| 10 Artikel | 1.366 B | Version 26 – grenzwertig |
+| 30 Artikel | 3.952 B | **passt in keinen QR-Code** |
+
+Die Voraussetzung hat sich an zwei Stellen geändert:
+
+1. **Beide Geräte haben denselben Katalog.** Name, Kategorie und Zeichen der
+   476 mitgelieferten Artikel stehen auf dem anderen Gerät schon. Übertragen
+   werden müssen Kennung und Produktwunsch.
+2. **Gepackt wird im Browser.** `CompressionStream('deflate-raw')` schrumpft
+   JSON mit immer denselben kurzen Schlüsseln auf ein Drittel.
+
+Damit sieht dieselbe Tabelle so aus:
+
+| Liste | Adresse | QR-Code |
+|---|---|---|
+| 10 Artikel | 285 B | Version 11 (61×61) |
+| 25 Artikel | 484 B | Version 15 (77×77) |
+| 40 Artikel | 705 B | Version 18 (89×89) |
+| 60 Artikel | 973 B | Version 22 (105×105) |
+| 100 Artikel | 1.517 B | passt nicht – dann als Datei teilen |
+
+### Die zwei Hälften – und warum nur eine gebaut wurde
+
+**Anzeigen** braucht einen QR-Erzeuger. Der steht in `src/qrcode.js`, selbst
+gebaut: Eine Bibliothek von einem fremden Server einzubinden verstieße gegen
+`default-src 'self'`, und eine mit Bauschritt gegen „kein Bauschritt".
+
+**Scannen** braucht – nichts. Der Code enthält eine Adresse mit den Daten im
+Anker (`…/#lz=…`). Das empfangende Gerät hält seine **gewöhnliche Kamera-App**
+darauf; iPhone und Android erkennen QR-Codes von Haus aus, tippen auf die
+Benachrichtigung öffnet Foxi mit der Liste. Ein eingebauter Scanner bräuchte
+eine Bilderkennung, eine Kameraberechtigung und auf iOS die installierte App –
+für dieselbe Handlung.
+
+**Und der Anker bricht Grundsatz I nicht:** Alles hinter dem Rautezeichen
+schickt kein Browser zu irgendeinem Server. Was über das Netz geht, ist die
+App selbst – und auch die nur, wenn sie dort noch nicht installiert ist.
+
+### Was nicht mitfährt
+
+- **Fotos.** Ein Produktfoto ist bis 900 KB groß, ein QR-Code fasst 2,9 KB.
+  Das sind drei Größenordnungen; es ist keine Abwägung, sondern Arithmetik.
+- **Kaufhistorie und gelernte Mengen** – dieselbe Regel wie bei der Datei.
+- **Ort, Märkte, Angebotsergebnis** – persönlich.
+
+### Vier Entscheidungen im Format
+
+1. **Die Bezeichnung fährt trotzdem mit**, obwohl die Kennung genügte. Sie
+   kostet eine QR-Version und rettet den Fall, dass das andere Gerät einen
+   älteren Katalogstand hat: Ohne sie wäre eine unbekannte Kennung stiller
+   Datenverlust – ein Artikel, der einfach fehlt.
+2. **Die Teilmarke steht von Anfang an im Format** (`n` von `g`), obwohl Foxi
+   immer genau einen Code erzeugt. Zwei Codes wären erst jenseits von rund
+   siebzig Artikeln nötig; kommen sie je, bleibt das Format kompatibel.
+   Dieselbe Lehre wie bei `DATEI_TYP`.
+3. **Zwei Schlüssel, ein Format:** `lz` gepackt, `l` ungepackt. Ein Gerät
+   ohne `CompressionStream` (vor Safari 16.4) erzeugt einen dichteren Code
+   für eine kürzere Liste und liest gepackte trotzdem – und wenn nicht, sagt
+   Foxi das, statt „kaputt" zu behaupten.
+4. **Was hereinkommt, ist fremd.** Eine Adresse kann jeder schicken, nicht
+   nur der eigene Bildschirm. Deshalb prüft `pruefeQrListe()` so streng wie
+   `pruefeAngebotsergebnis()`, und übernommen wird **nie** stillschweigend:
+   Es erscheint derselbe Zusammenführungs-Dialog wie beim Datei-Import. Der
+   QR-Code ist ein anderer Transportweg, keine zweite Wahrheit.
+
+### Wie der Erzeuger geprüft ist
+
+Ein selbst gebauter QR-Erzeuger ist nur so viel wert, wie er sich prüfen
+lässt – und gegen sich selbst zu prüfen wäre wertlos. `tests/qr.test.js`
+vergleicht das erzeugte Bild **Modul für Modul** mit den Fingerabdrücken
+einer unabhängigen Umsetzung (`qrcode` auf npm), über alle 25 Versionen und
+beide Fehlerkorrekturstufen. Beim Bauen hat genau das drei Fehler gefunden,
+die jeder für sich einen unlesbaren Code ergeben hätten:
+
+- ein Generatorpolynom in **umgekehrter Reihenfolge** – die Fehlerkorrektur
+  war plausibel und falsch;
+- eine Zuweisung im Mustervergleich, die nur den letzten Vergleich zählte;
+- eine Rundung in Regel 4 der Maskenwahl, abgeschnitten statt gerundet.
+
+Im Durchlauf kommt der Weg als Ganzes dazu: Das erste Gerät erzeugt den Code,
+ein **zweiter Browserkontext** – eigene Datenbank, also ein anderes Gerät –
+öffnet die Adresse und muss dieselbe Liste bekommen, ohne Foto und ohne
+Historie.
+
+---
+
 ## 8. Architektur
 
 ```
@@ -601,7 +701,7 @@ wie oft er Bier kauft und in welcher Menge. Ein Test hält das fest.
 
 | Funktion | Grund |
 |---|---|
-| QR-Code-Sync | Kapazitätsgrenze ~1 KB, Aufwand steht in keinem Verhältnis |
+| ~~QR-Code-Sync~~ | **Gebaut in 0.11.0.** Die Begründung stimmte für das damalige Format – siehe unten |
 | Barcode-Scan | Safari/iOS unterstützt `BarcodeDetector` nicht; eine Produktdatenbank wäre ein Netzwerk-Request |
 | Kassenbon-OCR | Thermopapier ist der Worst Case für OCR; die Kaufhistorie entsteht ohnehin beim Abhaken |
 | Spracheingabe | Die Web Speech API sendet Audio an Google/Apple – bricht Grundsatz I |
@@ -692,9 +792,9 @@ Tastatur öffnet.
 ## 11. Prüfen
 
 ```bash
-npm test                    # 112 Unit-Tests: Sortierung, Suche, Gruppierung,
+npm test                    # 191 Unit-Tests: Sortierung, Suche, Gruppierung,
                             # Exporte, Import, Datenintegrität
-node tools/durchlauf.mjs    # 84 Prüfungen im echten Browser (Chromium,
+node tools/durchlauf.mjs    # 93 Prüfungen im echten Browser (Chromium,
                             # iPhone-13-Profil) + die Bilder in docs/bilder/
 ```
 

@@ -1,6 +1,6 @@
 {
   "name": "einkaufsfuchs",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "description": "EinkaufsFuchs (Foxi) – Einkaufsliste für Haushalt, Familie und WG. PWA, alle Daten bleiben auf dem Gerät.",
   "type": "module",
   "private": true,

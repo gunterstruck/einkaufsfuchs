@@ -11,7 +11,7 @@
  * Netz fällt Foxi auf die vollständige App-Schale zurück.
  */
 
-const CACHE = 'einkaufsfuchs-v0.10.0';
+const CACHE = 'einkaufsfuchs-v0.11.0';
 
 const SCHALE = [
     './',
@@ -26,6 +26,8 @@ const SCHALE = [
     'src/texte.js',
     'src/logik.js',
     'src/angebotsradar.js',
+    'src/qrcode.js',
+    'src/qrliste.js',
     'src/db.js',
     'src/zustand.js',
     'src/version.js',
@@ -39,13 +41,13 @@ const SCHALE = [
     'src/ui/artikelblatt.js',
     'src/daten/katalog.json',
     'src/daten/rezepte.json',
-    'favicon.ico?v=0.10.0',
-    'icons/foxi.svg?v=0.10.0',
-    'icons/favicon-64.png?v=0.10.0',
-    'icons/icon-192.png?v=0.10.0',
-    'icons/icon-512.png?v=0.10.0',
-    'icons/maskable-512.png?v=0.10.0',
-    'icons/apple-touch-icon.png?v=0.10.0'
+    'favicon.ico?v=0.11.0',
+    'icons/foxi.svg?v=0.11.0',
+    'icons/favicon-64.png?v=0.11.0',
+    'icons/icon-192.png?v=0.11.0',
+    'icons/icon-512.png?v=0.11.0',
+    'icons/maskable-512.png?v=0.11.0',
+    'icons/apple-touch-icon.png?v=0.11.0'
 ];
 
 self.addEventListener('install', (ereignis) => {
