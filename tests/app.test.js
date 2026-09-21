@@ -4,6 +4,7 @@ const doppel = vi.hoisted(() => ({
     aenderung: null,
     bereichswechsel: null,
     aktiverBereich: 'liste',
+    angedockt: false,
     fensterZuhoerer: new Map(),
     dokumentZuhoerer: new Map(),
     zeichneListe: vi.fn(),
@@ -24,7 +25,8 @@ vi.mock('../src/ui/schale.js', () => ({
     zeigeBereich: vi.fn((bereich) => {
         doppel.aktiverBereich = bereich;
         doppel.bereichswechsel?.(bereich);
-    })
+    }),
+    katalogAngedockt: vi.fn(() => doppel.angedockt)
 }));
 
 vi.mock('../src/ui/liste.js', () => ({
@@ -104,5 +106,28 @@ describe('Aktualisierung der Ansichten', () => {
         vi.setSystemTime(new Date(2026, 8, 22, 12, 0, 0));
         doppel.fensterZuhoerer.get('focus')?.();
         expect(doppel.zeichneMehr).toHaveBeenCalledOnce();
+    });
+
+    /* Am Schreibtisch steht der Katalog dauerhaft links. Dann ist er nicht
+       mehr „der Bereich, den niemand ansieht" – er muss mitgezeichnet
+       werden, sonst steht dort eine veraltete Kachelwand. */
+    it('zeichnet den angedockten Katalog mit, obwohl die Liste vorn steht', async () => {
+        doppel.angedockt = true;
+        await wechsleZu('liste');
+        doppel.zeichneKatalog.mockClear();
+
+        doppel.aenderung('abhaken');
+        expect(doppel.zeichneKatalog).toHaveBeenCalledOnce();
+
+        /* Ein Artikel, der nur auf die Liste wandert, ändert keine
+           Reihenfolge. Dafür 480 Kacheln neu zu bauen wäre bei jedem Tipp
+           spürbar – eine Kachel wechselt die Farbe, mehr nicht. */
+        doppel.zeichneKatalog.mockClear();
+        doppel.synchronisiereKacheln.mockClear();
+        doppel.aenderung('liste');
+        expect(doppel.zeichneKatalog).not.toHaveBeenCalled();
+        expect(doppel.synchronisiereKacheln).toHaveBeenCalledOnce();
+
+        doppel.angedockt = false;
     });
 });

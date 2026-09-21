@@ -43,11 +43,34 @@ export function beiBereichswechsel(rueckruf) {
     return () => bereichsZuhoerer.delete(rueckruf);
 }
 
+/**
+ * Die Schreibtisch-Ansicht: quer, breit und hoch genug für zwei Spalten.
+ *
+ * Wortgleich steht diese Abfrage in `foxi.css`; dort schneidet sie das
+ * Raster, hier entscheidet sie, dass der Katalog nicht versteckt wird. Ein
+ * Test hält beide Fassungen zusammen – liefen sie auseinander, stünde die
+ * linke Spalte leer. Die Begründung der drei Bedingungen steht im CSS.
+ */
+export const DESKTOP_ABFRAGE = '(min-width: 900px) and (min-height: 480px) and (orientation: landscape)';
+
+/** Steht der Katalog dauerhaft links, statt hinter seinem Reiter? */
+export function katalogAngedockt() {
+    return window.matchMedia?.(DESKTOP_ABFRAGE).matches === true;
+}
+
 export function zeigeBereich(name) {
+    const angedockt = katalogAngedockt();
+    /* Am Schreibtisch ist der Katalog immer da. Ein Wechsel „zum Katalog"
+       hätte kein Ziel mehr – der Reiter ist dort ausgeblendet, und was doch
+       noch dorthin schickt (der leere Zustand der Liste), landet bei der
+       Liste, neben der die Kachelwand ohnehin schon steht. */
+    if (angedockt && name === 'katalog') name = 'liste';
+
     aktuellerBereich = name;
     for (const rueckruf of bereichsZuhoerer) rueckruf(name);
     for (const abschnitt of document.querySelectorAll('.bereich')) {
-        abschnitt.hidden = abschnitt.id !== `bereich-${name}`;
+        const gefragt = abschnitt.id === `bereich-${name}`;
+        abschnitt.hidden = !(gefragt || (angedockt && abschnitt.id === 'bereich-katalog'));
     }
     for (const tab of document.querySelectorAll('.tab')) {
         const aktiv = tab.dataset.bereich === name;
@@ -202,6 +225,13 @@ function rahmenUeberwachen() {
 export function schaleVerdrahten() {
     texteEinsetzen();
     rahmenUeberwachen();
+
+    /* Wer das Tablet dreht, wechselt den Schnitt. Ohne diese Zeile bliebe
+       die Katalogspalte leer, bis jemand einen Reiter antippt – und im
+       umgekehrten Fall stünden nach dem Zurückdrehen zwei Bereiche
+       übereinander. */
+    window.matchMedia?.(DESKTOP_ABFRAGE)
+        .addEventListener('change', () => zeigeBereich(aktiverBereich()));
 
     for (const tab of document.querySelectorAll('.tab')) {
         tab.addEventListener('click', () => zeigeBereich(tab.dataset.bereich));
