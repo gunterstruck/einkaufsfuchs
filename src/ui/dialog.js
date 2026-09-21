@@ -21,8 +21,9 @@ let offen = null;
  * @param {string} inhalt.titel
  * @param {Node[]} inhalt.koerper   frei gestaltbarer Inhalt
  * @param {{text:string, wirkung:Function, betont?:boolean}[]} inhalt.knoepfe
+ * @param {boolean} [inhalt.fokus]  ins erste Feld springen (siehe unten)
  */
-export function zeigeDialog({ titel, koerper = [], knoepfe = [] }) {
+export function zeigeDialog({ titel, koerper = [], knoepfe = [], fokus = false }) {
     schliesseDialog();
 
     const auflage = document.createElement('div');
@@ -79,7 +80,15 @@ export function zeigeDialog({ titel, koerper = [], knoepfe = [] }) {
     document.body.append(auflage);
     offen = auflage;
 
-    const erstesFeld = rumpf.querySelector('input, textarea');
+    /* Von selbst in ein Eingabefeld springen nur dort, wo Tippen der Zweck
+       des Dialogs ist – beim Rezeptnamen etwa. Sonst öffnet jedes geöffnete
+       Blatt die Bildschirmtastatur: Sie verdeckt genau das, was man ansehen
+       wollte, und auf iOS schiebt sie den sichtbaren Ausschnitt nach oben,
+       der danach manchmal oben stehen bleibt (`rahmenZurueckholen` in
+       `schale.js` holt ihn zurück). Der Fokus wandert trotzdem in den
+       Dialog – auf den ersten Knopf –, damit Tastatur und Vorlesehilfe
+       nicht hinter der Auflage weiterlaufen. */
+    const erstesFeld = fokus ? rumpf.querySelector('input, textarea') : null;
     setTimeout(() => (erstesFeld || karte.querySelector('button'))?.focus(), 0);
     return auflage;
 }
@@ -90,6 +99,13 @@ function beiTaste(ereignis) {
 
 export function schliesseDialog() {
     document.removeEventListener('keydown', beiTaste);
+    /* Erst den Fokus aus dem Feld nehmen, dann die Auflage entfernen.
+       Verschwindet ein fokussiertes Feld aus dem Dokument, schließt iOS die
+       Tastatur zwar, holt den dafür verschobenen Ausschnitt aber nicht
+       zuverlässig zurück – und dann steht die untere Leiste außerhalb des
+       Bildes. Ein ordentliches `blur` löst außerdem `focusout` aus, worauf
+       die Schale nachsieht. */
+    if (offen?.contains(document.activeElement)) document.activeElement.blur();
     offen?.remove();
     offen = null;
 }

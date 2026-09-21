@@ -83,6 +83,8 @@ export function ergebnisEinfuegen() {
 
     zeigeDialog({
         titel: t('angebote.ergebnisTitel'),
+        /* Dieser Dialog existiert, um etwas einzufügen. */
+        fokus: true,
         koerper: [feld],
         knoepfe: [{
             text: t('angebote.uebernehmen'),
