@@ -740,6 +740,79 @@ const kopfPasstBreit = await seite.evaluate(() => {
 pruefe(kopfPasstBreit, 'Auch mit vollem Namen läuft die Kopfzeile nicht über');
 await seite.screenshot({ path: join(bilder, '13-name-breit.png') });
 
+/* ── Die Schreibtisch-Ansicht ───────────────────────────────────────────────
+
+   Quer und groß genug: Leiste links, Katalog dauerhaft daneben, Liste als
+   Arbeitsfläche. Hoch oder klein: dieselbe App im Handy-Schnitt. Geprüft
+   werden alle vier Formate, die im Haushalt vorkommen. */
+async function schnitt() {
+    return seite.evaluate(() => {
+        const leiste = document.querySelector('.tableiste').getBoundingClientRect();
+        const katalog = document.getElementById('bereich-katalog');
+        const liste = document.getElementById('bereich-liste');
+        return {
+            leisteLinks: Math.round(leiste.left),
+            leisteOben: Math.round(leiste.top),
+            leisteBreite: Math.round(leiste.width),
+            leisteHoehe: Math.round(leiste.height),
+            katalogSichtbar: !katalog.hidden,
+            katalogLinks: Math.round(katalog.getBoundingClientRect().left),
+            listeSichtbar: !liste.hidden,
+            listeLinks: Math.round(liste.getBoundingClientRect().left),
+            katalogReiter: getComputedStyle(document.getElementById('tab-katalog')).display,
+            fensterbreite: window.innerWidth
+        };
+    });
+}
+
+await seite.locator('#tab-liste').tap();
+await seite.setViewportSize({ width: 1280, height: 800 });
+await seite.waitForTimeout(250);
+const schreibtisch = await schnitt();
+pruefe(schreibtisch.leisteLinks === 0 && schreibtisch.leisteHoehe > 400 &&
+    schreibtisch.leisteBreite < 160,
+    `Am Schreibtisch steht die Leiste links (${schreibtisch.leisteBreite}×${schreibtisch.leisteHoehe} px)`);
+pruefe(schreibtisch.katalogSichtbar && schreibtisch.listeSichtbar &&
+    schreibtisch.katalogLinks < schreibtisch.listeLinks,
+    'Katalog und Liste stehen nebeneinander, der Katalog links');
+/* Der Reiter hätte kein Ziel mehr – die Kachelwand steht ja schon da. */
+pruefe(schreibtisch.katalogReiter === 'none', 'Der Katalog-Reiter ist ausgeblendet');
+
+/* Der eigentliche Gewinn: Kachel links antippen, Zeile rechts erscheint –
+   ohne Bereichswechsel. */
+const vorher = Number((await seite.locator('#tab-liste-zahl').textContent()) || '0');
+await seite.locator('#katalog-suche').fill('Zitronen');
+await seite.waitForSelector('#bereich-katalog .kachel');
+await seite.locator('#bereich-katalog .kachel').first().click();
+await seite.waitForTimeout(250);
+const nachher = await schnitt();
+pruefe(Number(await seite.locator('#tab-liste-zahl').textContent()) === vorher + 1 &&
+    nachher.listeSichtbar && nachher.katalogSichtbar,
+    'Ein Tipp in der Katalogspalte füllt die Liste daneben');
+await seite.locator('#katalog-suche').fill('');
+await seite.waitForTimeout(150);
+await seite.screenshot({ path: join(bilder, '17-schreibtisch.png') });
+
+/* Tablet quer: dasselbe. Tablet hoch: Handy-Schnitt – obwohl breit genug. */
+await seite.setViewportSize({ width: 1112, height: 834 });
+await seite.waitForTimeout(250);
+pruefe((await schnitt()).katalogSichtbar, 'Das Tablet im Querformat bekommt die Schreibtisch-Ansicht');
+
+await seite.setViewportSize({ width: 834, height: 1112 });
+await seite.waitForTimeout(250);
+const tabletHoch = await schnitt();
+pruefe(!tabletHoch.katalogSichtbar && tabletHoch.leisteLinks === 0 &&
+    tabletHoch.leisteBreite === tabletHoch.fensterbreite,
+    'Das Tablet im Hochformat bleibt in der Handy-Ansicht');
+
+/* Und das Telefon bleibt in der Handy-Ansicht, auch quer: über 900 px breit,
+   aber keine 480 px hoch. */
+await seite.setViewportSize({ width: 926, height: 428 });
+await seite.waitForTimeout(250);
+const telefonQuer = await schnitt();
+pruefe(!telefonQuer.katalogSichtbar && telefonQuer.katalogReiter !== 'none',
+    'Das Telefon bleibt auch quer in der Handy-Ansicht');
+
 /* ── Der Rahmen sitzt noch ──────────────────────────────────────────────────
 
    Nach einem ganzen Durchlauf mit Dialogen, Feldern und Bereichswechseln muss

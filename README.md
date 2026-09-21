@@ -4,7 +4,7 @@
 ![Kein Konto](https://img.shields.io/badge/Kein%20Konto-kein%20Login%2C%20kein%20Backend-0f766e)
 ![PWA](https://img.shields.io/badge/PWA-offlinef%C3%A4hig-purple)
 ![MIT License](https://img.shields.io/badge/License-MIT-yellow)
-![Version](https://img.shields.io/badge/Version-0.9.2-orange)
+![Version](https://img.shields.io/badge/Version-0.10.0-orange)
 
 **Tippen statt Tippen.**
 
@@ -143,6 +143,34 @@ Der Wechsel ist jederzeit und **verlustfrei** möglich, und zwar wörtlich: Er
 berührt genau einen Wert in den Einstellungen. Eine Menge, die im
 Expertenmodus entstanden ist, steht in der Datenbank weiter – Basis zeigt sie
 nur nicht an. Wer zurückschaltet, findet sie unverändert wieder.
+
+---
+
+## Handy und Schreibtisch
+
+Die zweite Achse, und sie wird nicht eingestellt, sondern gemessen: **Quer
+ist Schreibtisch, hoch ist Handy.**
+
+| | Handy-Schnitt | Schreibtisch-Schnitt |
+|---|---|---|
+| Navigation | Leiste unten | Leiste links |
+| Katalog | hinter seinem Reiter | dauerhaft in der linken Spalte |
+| Arbeitsfläche | ein Bereich | Liste (oder Mehr) rechts daneben |
+
+![Schreibtisch](docs/bilder/17-schreibtisch.png)
+
+Am Schreibtisch – und auf dem **quer gehaltenen Tablet** – steht links die
+Eingabeseite und rechts die Arbeitsfläche, wie bei TourFuchs und SoundFuchs.
+Eine Kachel links legt den Artikel in die Liste rechts, ohne Reiterwechsel.
+
+Im **Hochformat** bleibt auch ein breites Tablet in der Handy-Ansicht: Der
+Daumen an der unteren Leiste ist dort die bessere Bedienung. Und das
+**Telefon** bekommt in jeder Lage den Handy-Schnitt – quer ist es zwar breit
+genug, aber keine 480 px hoch, und zwei Spalten in 400 px Höhe wären ein
+Briefschlitz.
+
+Es gibt **keine Funktion, die es nur am Schreibtisch gibt.** Beide Schnitte
+zeigen dieselbe App; Einfachheit gilt auf jeder Bildschirmgröße.
 
 ---
 
@@ -331,7 +359,7 @@ in den normalen Listenexport aufgenommen.
 
 ## Stand und was als Nächstes kommt
 
-**Gebaut (v0.9.2):** Version 1 ist inhaltlich vollständig – Basismodus,
+**Gebaut (v0.10.0):** Version 1 ist inhaltlich vollständig – Basismodus,
 lernender Katalog, Rezepte, Kategorie-Reihenfolge per Ziehen, Teilen als
 Datei mit Zusammenführung beim Import, Briefing-Export, Statistik,
 Offlinebetrieb, Installierbarkeit. Der geführte Angebotscheck verbindet Foxis

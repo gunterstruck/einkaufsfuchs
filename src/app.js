@@ -7,7 +7,9 @@
  */
 
 import { starte, beiAenderung } from './zustand.js';
-import { schaleVerdrahten, zeigeBereich, aktiverBereich, beiBereichswechsel } from './ui/schale.js';
+import {
+    schaleVerdrahten, zeigeBereich, aktiverBereich, beiBereichswechsel, katalogAngedockt
+} from './ui/schale.js';
 import { listeVerdrahten, zeichneListe } from './ui/liste.js';
 import { katalogVerdrahten, zeichneKatalog, synchronisiereKacheln } from './ui/katalog.js';
 import { mehrVerdrahten, zeichneMehr } from './ui/mehr.js';
@@ -22,6 +24,16 @@ let letzterTag = null;
 let tageswechselZeitgeber = null;
 
 function zeichneWennSichtbar() {
+    /* Am Schreibtisch steht der Katalog dauerhaft in der linken Spalte. Dann
+       ist er nicht „der Bereich, den niemand ansieht", sondern immer im
+       Blick – und muss mitgezeichnet werden. Ein Artikel, der nur auf die
+       Liste wandert, löst das nicht aus: Dafür genügt `synchronisiereKacheln`
+       weiter unten, sonst würden 480 Kacheln bei jedem Tipp neu gebaut. */
+    if (katalogAngedockt() && veraltet.katalog) {
+        zeichneKatalog();
+        veraltet.katalog = false;
+    }
+
     const bereich = aktiverBereich();
     if (!veraltet[bereich]) return;
     if (bereich === 'liste') zeichneListe();

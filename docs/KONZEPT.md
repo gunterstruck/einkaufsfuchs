@@ -436,6 +436,66 @@ und „Deine Daten".
 
 ---
 
+## 7a. Handy und Schreibtisch
+
+Die zweite Achse neben Basis/Experte, und sie wird **nicht** eingestellt,
+sondern gemessen. Es gibt zwei Schnitte derselben App:
+
+| | Handy-Schnitt | Schreibtisch-Schnitt |
+|---|---|---|
+| Navigation | Leiste unten | Leiste links |
+| Katalog | hinter seinem Reiter | dauerhaft in der linken Spalte |
+| Arbeitsfläche | ein Bereich | Liste (oder Mehr) rechts daneben |
+
+Der Schreibtisch-Schnitt gilt bei
+`(min-width: 900px) and (min-height: 480px) and (orientation: landscape)`.
+
+**Die Regel, die man sich merken kann: quer ist Schreibtisch, hoch ist
+Handy.** Ein Tablet im Hochformat bleibt deshalb in der Handy-Ansicht, obwohl
+es breit genug wäre – die Bedienung mit dem Daumen an der unteren Leiste ist
+dort die bessere. Gedreht wechselt es den Schnitt.
+
+Die Höhenbedingung ist die Zeile, die Telefone aussperrt: Ein großes Telefon
+quer ist über 900 px breit, aber nur gut 400 px hoch. Zwei Spalten in 400 px
+Höhe wären keine Schreibtisch-Ansicht, sondern ein Briefschlitz. **Auf dem
+Telefon gibt es damit nur den Handy-Schnitt, in jeder Lage.**
+
+**Warum der Katalog die linke Spalte bekommt** und nicht die Liste: Das ist
+der Aufbau der Geschwister. Bei TourFuchs und SoundFuchs steht links die
+Eingabeseite und rechts die Arbeitsfläche. Bei Foxi heißt Eingabe: Artikel
+auf die Liste legen. Und es ist genau der Gewinn, den ein großer Bildschirm
+hergibt – Kachel links antippen, Zeile rechts erscheinen sehen, ohne einen
+Reiter zu wechseln.
+
+Drei Dinge, die dabei zu beachten waren:
+
+1. **Der Katalog-Reiter verschwindet**, sobald die Kachelwand ohnehin
+   dasteht. Ein Reiter ohne Ziel ist schlimmer als kein Reiter. Wer trotzdem
+   dorthin geschickt wird – etwa vom leeren Zustand der Liste –, landet bei
+   der Liste, neben der der Katalog schon steht.
+2. **Der angedockte Katalog ist kein verdeckter Bereich mehr.** `app.js`
+   zeichnet absichtlich nur, was jemand ansieht; am Schreibtisch gehört der
+   Katalog dazu. Ein Artikel, der bloß auf die Liste wandert, löst trotzdem
+   keinen Neubau der 480 Kacheln aus – dafür genügt `synchronisiereKacheln()`.
+3. **Die Abfrage steht zweimal:** im CSS, wo sie das Raster schneidet, und in
+   `schale.js` als `DESKTOP_ABFRAGE`, wo sie entscheidet, dass der Katalog
+   sichtbar bleibt. Ein Test vergleicht beide Zeichenketten – liefen sie
+   auseinander, stünde die linke Spalte leer.
+
+**Das Manifest darf die Ausrichtung nicht festnageln.** Es stand auf
+`"orientation": "portrait"`; das verbietet der installierten App genau die
+Drehung, aus der der Schreibtisch-Schnitt entsteht. Jetzt steht dort `"any"`.
+Eine Sperre nur fürs Telefon gibt es nicht – das Manifest kennt die Geräte
+nicht, nur die App. Das Telefon braucht sie auch nicht: Es bekommt in jeder
+Lage denselben Schnitt.
+
+Dieser Abschnitt beschreibt ausdrücklich nur den **Schnitt**. Funktionen, die
+es nur am Schreibtisch gäbe, existieren nicht – und wenn welche kommen,
+stehen sie hier zur Diskussion, nicht im Code. Grundsatz II gilt auf beiden
+Bildschirmgrößen.
+
+---
+
 ## 8. Architektur
 
 ```
@@ -632,9 +692,9 @@ Tastatur öffnet.
 ## 11. Prüfen
 
 ```bash
-npm test                    # 107 Unit-Tests: Sortierung, Suche, Gruppierung,
+npm test                    # 112 Unit-Tests: Sortierung, Suche, Gruppierung,
                             # Exporte, Import, Datenintegrität
-node tools/durchlauf.mjs    # 77 Prüfungen im echten Browser (Chromium,
+node tools/durchlauf.mjs    # 84 Prüfungen im echten Browser (Chromium,
                             # iPhone-13-Profil) + die Bilder in docs/bilder/
 ```
 
