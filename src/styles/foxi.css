@@ -52,6 +52,23 @@
     -webkit-tap-highlight-color: transparent;
 }
 
+/* Eingabefelder: mindestens 16 px, ausnahmslos.
+
+   Das ist keine Geschmacksfrage, sondern die Bedingung dafür, dass man die
+   untere Leiste behält. Unter 16 px zoomt iOS beim Hineintippen die ganze
+   Seite heran, und es zoomt nicht zuverlässig wieder heraus – besonders
+   dann nicht, wenn das Feld beim Schließen aus dem Dokument verschwindet.
+   Danach ist der sichtbare Ausschnitt kleiner als die Seite: Man sitzt in
+   der Liste fest, kann darin rollen, und Katalog und Mehr stehen außerhalb.
+
+   Der Stamm setzt 0,9rem (13,5 px), die Suchzeile 0,95rem – beides zu wenig.
+   Deshalb steht es hier noch einmal, mit genug Gewicht, um beide zu
+   überstimmen. Kästchen, Schieber und die versteckte Dateiwahl bleiben außen
+   vor; sie bekommen keine Tastatur und keinen Zoom. */
+:is(input, select, textarea):not([type="checkbox"]):not([type="range"]):not([type="file"]) {
+    font-size: 16px;
+}
+
 /* Kopfbereich – Form und Leitton aus derselben Fuchs-Familie. */
 .topbar {
     grid-row: 1;

@@ -552,7 +552,7 @@ wie oft er Bier kauft und in welcher Menge. Ein Test hält das fest.
 
 ## 10. Erkenntnisse aus dem Bau
 
-Sieben Dinge, die Zeit gekostet haben und die man nicht zweimal lernen muss.
+Acht Dinge, die Zeit gekostet haben und die man nicht zweimal lernen muss.
 
 **`insertBefore` löst die Pointer-Capture.** Die Kategorie-Reihenfolge ließ
 sich genau *einmal* verschieben, dann stand der Zug still, und gespeichert
@@ -597,14 +597,44 @@ dem Bildschirmfoto der gelernten Mengen auf. Eine Regel, die an einem
 Container hängt, gilt eben nur für dessen Kinder; was über den Baum hinaus
 gelten soll, gehört an beide Wurzeln.
 
+**Ein Eingabefeld unter 16 px kostet die untere Leiste.** Aus dem Betrieb
+gemeldet: „Manchmal komme ich unten nicht mehr an Katalog und Mehr – ich bin
+nur noch in der Liste." Drei Dinge trafen zusammen, und alle drei hängen an
+der Bildschirmtastatur:
+
+1. iOS **zoomt die ganze Seite heran**, sobald ein Feld mit weniger als 16 px
+   Schriftgröße den Fokus bekommt – und zoomt nicht zuverlässig wieder
+   heraus. Der Stamm setzt 0,9rem (13,5 px). Danach ist der sichtbare
+   Ausschnitt kleiner als die Seite, und die Leiste steht außerhalb.
+2. iOS **verkleinert die Seite nicht**, wenn die Tastatur kommt, sondern
+   schiebt den sichtbaren Ausschnitt darüber. Verschwindet das fokussierte
+   Feld beim Schließen aus dem Dokument – genau das tat jeder Dialog –,
+   bleibt der Ausschnitt manchmal oben stehen.
+3. Der Dialog sprang **von selbst ins erste Feld**. Damit zog jedes geöffnete
+   Artikelblatt die Tastatur hoch, auch wenn man nur die Angebote ansehen
+   wollte.
+
+Warum das ausgerechnet hier so weh tut: Foxi ist genau bildschirmhoch, die
+Leiste ist eine Zeile im Raster und nicht separat am Bildschirm befestigt.
+Jede Verschiebung des Fensters nimmt sie mit – und mit ihr den einzigen Weg
+aus der Liste heraus.
+
+Gegenmittel, in dieser Reihenfolge: **Felder auf 16 px** (Ursache), **kein
+Fokus ohne Tippabsicht** (Auslöser), **`blur()` vor dem Entfernen** und
+`rahmenZurueckholen()` in `schale.js` als Netz darunter – es prüft nach jedem
+`focusout` und jeder Größenänderung des Ausschnitts, ob das Fenster
+verschoben ist, während niemand tippt, und holt es zurück. Die Prüfstrecke
+hält beides fest: dass kein Feld unter 16 px liegt und dass das Blatt keine
+Tastatur öffnet.
+
 ---
 
 ## 11. Prüfen
 
 ```bash
-npm test                    # 102 Unit-Tests: Sortierung, Suche, Gruppierung,
+npm test                    # 107 Unit-Tests: Sortierung, Suche, Gruppierung,
                             # Exporte, Import, Datenintegrität
-node tools/durchlauf.mjs    # 71 Prüfungen im echten Browser (Chromium,
+node tools/durchlauf.mjs    # 77 Prüfungen im echten Browser (Chromium,
                             # iPhone-13-Profil) + die Bilder in docs/bilder/
 ```
 

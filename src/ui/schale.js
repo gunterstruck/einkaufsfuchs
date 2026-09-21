@@ -136,11 +136,72 @@ export function zaehlerAnzeigen() {
 }
 
 /* ────────────────────────────────────────────────────────────────────────
+   Der Rahmen
+
+   Foxi ist genau so hoch wie der Bildschirm: Kopf oben, Inhalt in der Mitte,
+   Leiste unten. Gerollt wird ausschließlich *innerhalb* des Inhalts. Genau
+   deshalb ist jede Verschiebung des Fensters selbst ein Fehler und nicht nur
+   ein Schönheitsfleck: Sie schiebt die untere Leiste aus dem Bild, und dann
+   kommt man an Katalog und Mehr nicht mehr heran – man sitzt in der Liste
+   fest, kann darin rollen und sonst nichts.
+
+   Verschoben wird der Ausschnitt von der Bildschirmtastatur. iOS verkleinert
+   die Seite nicht, sondern schiebt den sichtbaren Ausschnitt über sie hinweg,
+   damit das Feld über der Tastatur steht. Geht die Tastatur, soll er
+   zurückspringen – und tut es manchmal nicht, besonders wenn das fokussierte
+   Feld beim Schließen aus dem Dokument verschwindet.
+
+   Der Weg zurück ist billig und ungefährlich: Steht kein Feld im Fokus, darf
+   der Ausschnitt gar nicht verschoben sein. Ist er es doch, wird er
+   zurückgeholt.
+   ──────────────────────────────────────────────────────────────────────── */
+
+/** Reine Entscheidung, damit sie prüfbar ist: Muss der Rahmen zurück? */
+export function rahmenVerschoben({ scrollY = 0, versatz = 0, tippt = false } = {}) {
+    /* Während getippt wird, ist die Verschiebung gewollt – sie hält das Feld
+       über der Tastatur. Sie zurückzuholen hieße, dem Nutzer beim Schreiben
+       das Feld unter den Fingern wegzuziehen. */
+    if (tippt) return false;
+    return Math.abs(scrollY) > 1 || Math.abs(versatz) > 1;
+}
+
+function tipptGerade() {
+    const el = document.activeElement;
+    if (!el) return false;
+    return el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable === true;
+}
+
+/** Den Rahmen zurückholen, falls nötig. Gibt zurück, ob etwas zu tun war. */
+export function rahmenZurueckholen() {
+    const verschoben = rahmenVerschoben({
+        scrollY: window.scrollY || 0,
+        versatz: window.visualViewport?.offsetTop || 0,
+        tippt: tipptGerade()
+    });
+    if (!verschoben) return false;
+    window.scrollTo(0, 0);
+    return true;
+}
+
+function rahmenUeberwachen() {
+    /* Der kleine Verzug lässt dem Browser den Vortritt: Meistens räumt er
+       selbst auf, und dann findet die Prüfung nichts mehr zu tun. */
+    const spaeter = () => setTimeout(rahmenZurueckholen, 150);
+    document.addEventListener('focusout', spaeter);
+    window.addEventListener('orientationchange', spaeter);
+    window.addEventListener('pageshow', spaeter);
+    /* Die Tastatur meldet sich als Größenänderung des sichtbaren
+       Ausschnitts – beim Auf- *und* beim Zugehen. */
+    window.visualViewport?.addEventListener('resize', spaeter);
+}
+
+/* ────────────────────────────────────────────────────────────────────────
    Verdrahtung
    ──────────────────────────────────────────────────────────────────────── */
 
 export function schaleVerdrahten() {
     texteEinsetzen();
+    rahmenUeberwachen();
 
     for (const tab of document.querySelectorAll('.tab')) {
         tab.addEventListener('click', () => zeigeBereich(tab.dataset.bereich));

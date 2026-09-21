@@ -175,6 +175,9 @@ function listeAlsRezept() {
 
     zeigeDialog({
         titel: t('rezepte.nameFrage'),
+        /* Hier ist Tippen der ganze Zweck des Dialogs – die Tastatur soll
+           gleich da sein. Warum das die Ausnahme ist: `zeigeDialog`. */
+        fokus: true,
         koerper: [feld],
         knoepfe: [{
             text: t('menge.fertig'),
@@ -481,6 +484,7 @@ function marktDialog() {
     };
     zeigeDialog({
         titel: t('angebote.marktHinzufuegen'),
+        fokus: true,
         koerper: [haendler, filiale, absatz(t('angebote.marktLokal'), 'muted small')],
         knoepfe: [{ text: t('menge.fertig'), betont: true, wirkung: sichern }]
     });

@@ -182,6 +182,33 @@ await seite.waitForSelector('.dialog .mengen-editor');
 pruefe(await seite.locator('.dialog-titel').isVisible(),
     'Der Knopf neben der Zeile öffnet das Artikelblatt');
 
+/* Das Blatt darf nicht von selbst ins Eingabefeld springen. Auf iOS zieht
+   das die Bildschirmtastatur hoch: Sie verdeckt die Angebote, und sie
+   verschiebt den sichtbaren Ausschnitt – der danach manchmal oben stehen
+   bleibt und die untere Leiste mitnimmt. Der Fokus geht trotzdem in den
+   Dialog, sonst liefe die Tastaturbedienung hinter der Auflage weiter. */
+await seite.waitForTimeout(80);
+const fokusImBlatt = await seite.evaluate(() => ({
+    marke: document.activeElement?.tagName || '',
+    imDialog: document.querySelector('.dialog')?.contains(document.activeElement) === true
+}));
+pruefe(fokusImBlatt.marke !== 'INPUT' && fokusImBlatt.marke !== 'TEXTAREA',
+    `Das Blatt öffnet keine Tastatur (Fokus: ${fokusImBlatt.marke || 'nichts'})`);
+pruefe(fokusImBlatt.imDialog, 'Der Fokus steht trotzdem im Dialog');
+
+/* Die zweite Hälfte desselben Problems: Unter 16 px zoomt iOS beim
+   Hineintippen die Seite heran und nicht zuverlässig wieder heraus – danach
+   steht die untere Leiste außerhalb des Ausschnitts. Geprüft wird hier alles,
+   was gerade im Dokument steht: das Feld im Blatt und die Katalogsuche. */
+const zuKleineFelder = await seite.evaluate(() => [...document.querySelectorAll(
+    'input:not([type="checkbox"]):not([type="range"]):not([type="file"]), textarea, select'
+)].map((el) => ({
+    was: el.id || el.className || el.tagName,
+    groesse: Math.round(parseFloat(getComputedStyle(el).fontSize) * 10) / 10
+})).filter((feld) => feld.groesse < 16));
+pruefe(zuKleineFelder.length === 0,
+    `Kein Eingabefeld unter 16 px${zuKleineFelder.length ? `: ${zuKleineFelder.map((f) => `${f.was} ${f.groesse}px`).join(', ')}` : ''}`);
+
 /* Abbrechen darf nichts ändern: Das Blatt zeigt an, es speichert nicht. */
 await seite.locator('.dialog input[type="text"]').fill('wird verworfen');
 await seite.locator('.dialog-abbruch').tap();
@@ -335,6 +362,11 @@ await seite.screenshot({ path: join(bilder, '08-rezept-uebertragen.png') });
 await seite.locator('#tab-mehr').tap();
 await seite.locator('button', { hasText: 'Aktuelle Liste als Rezept sichern' }).tap();
 await seite.waitForSelector('.dialog input');
+/* Die Ausnahme von der Regel weiter unten: Hier ist Tippen der Zweck des
+   Dialogs, also springt der Fokus ins Feld – und die Tastatur kommt sofort. */
+await seite.waitForTimeout(80);
+pruefe(await seite.evaluate(() => document.activeElement?.tagName) === 'INPUT',
+    'Wo Tippen der Zweck ist, springt der Fokus ins Feld');
 await seite.locator('.dialog input').fill('Wochenende');
 await seite.locator('.dialog .primary').tap();
 await seite.waitForTimeout(200);
@@ -707,6 +739,31 @@ const kopfPasstBreit = await seite.evaluate(() => {
 });
 pruefe(kopfPasstBreit, 'Auch mit vollem Namen läuft die Kopfzeile nicht über');
 await seite.screenshot({ path: join(bilder, '13-name-breit.png') });
+
+/* ── Der Rahmen sitzt noch ──────────────────────────────────────────────────
+
+   Nach einem ganzen Durchlauf mit Dialogen, Feldern und Bereichswechseln muss
+   die untere Leiste noch im Bild stehen. Ist der Rahmen verschoben, kommt man
+   an Katalog und Mehr nicht mehr heran – man sitzt in der Liste fest. Am
+   Schreibtisch kann das nur eine Verschiebung des Fensters auslösen; auf iOS
+   kommt die Bildschirmtastatur dazu, gegen die `rahmenZurueckholen()` in
+   `schale.js` steht. */
+await seite.setViewportSize({ width: 390, height: 844 });
+await seite.locator('#tab-liste').tap();
+await seite.waitForTimeout(200);
+const rahmen = await seite.evaluate(() => {
+    const leiste = document.querySelector('.tableiste').getBoundingClientRect();
+    return {
+        scrollY: window.scrollY,
+        versatz: window.visualViewport?.offsetTop || 0,
+        unterkante: Math.round(leiste.bottom),
+        fensterhoehe: window.innerHeight
+    };
+});
+pruefe(rahmen.scrollY === 0 && rahmen.versatz === 0,
+    `Das Fenster steht unverschoben (Rollstand ${rahmen.scrollY}, Versatz ${rahmen.versatz})`);
+pruefe(rahmen.unterkante <= rahmen.fensterhoehe + 1 && rahmen.unterkante > rahmen.fensterhoehe - 120,
+    `Die untere Leiste steht im Bild (Unterkante ${rahmen.unterkante} von ${rahmen.fensterhoehe})`);
 
 /* ── Netz und Regeln ────────────────────────────────────────────────────── */
 pruefe(fremdeAnfragen.length === 0,
