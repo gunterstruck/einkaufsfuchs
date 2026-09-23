@@ -10,6 +10,7 @@ import { readFile, stat } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { dirname, extname, join, normalize } from 'node:path';
 import { chromium } from 'playwright';
+import { warteBis } from './warten.mjs';
 
 const wurzel = join(dirname(fileURLToPath(import.meta.url)), '..');
 const workerNeu = await readFile(join(wurzel, 'sw.js'), 'utf8');
@@ -127,17 +128,20 @@ try {
         const registrierung = await navigator.serviceWorker.getRegistration();
         await registrierung.update();
     });
-    await seite.waitForFunction(async () => Boolean((await navigator.serviceWorker.getRegistration())?.waiting));
+    await warteBis(seite, async () => Boolean((await navigator.serviceWorker.getRegistration())?.waiting),
+        'der neue Worker steht bereit');
     pruefe(navigationen === 0, 'Ein Update lädt offene Fenster nicht neu');
     pruefe(await seite.locator('.mengen-editor input[type=text]').inputValue() === 'Mein ungespeicherter Wunsch', 'Ungespeicherte Eingaben bleiben erhalten');
     await zweitesFenster.bringToFront();
-    await zweitesFenster.waitForFunction(async () => Boolean((await navigator.serviceWorker.getRegistration()).waiting));
+    await warteBis(zweitesFenster, async () => Boolean((await navigator.serviceWorker.getRegistration()).waiting),
+        'auch das zweite Fenster kennt den wartenden Worker');
     await seite.close();
     pruefe(await zweitesFenster.evaluate(async () => (await caches.keys()).includes('einkaufsfuchs-update-test-alt')), 'Die alte Fassung bleibt bis zum Schließen des zweiten Fensters aktiv');
     await zweitesFenster.close();
     seite = await kontext.newPage();
     await seite.goto(adresse, { waitUntil: 'networkidle' });
-    await seite.waitForFunction(async () => !(await caches.keys()).includes('einkaufsfuchs-update-test-alt'));
+    await warteBis(seite, async () => !(await caches.keys()).includes('einkaufsfuchs-update-test-alt'),
+        'der neue Worker hat übernommen und den alten Zwischenspeicher geräumt');
 
     const ergebnis = await seite.evaluate(async () => {
         const wert = await new Promise((fertig, kaputt) => {
