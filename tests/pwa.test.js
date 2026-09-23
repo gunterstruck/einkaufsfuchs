@@ -70,10 +70,23 @@ describe('Fuchs-Familienzeichen', () => {
 });
 
 describe('Mobile App-Schale', () => {
-    it('hat einen Höhen-Fallback und reserviert die Reiterzeile fest', () => {
+    it('hängt an den Fensterkanten statt an einer Viewport-Einheit und reserviert die Reiterzeile fest', () => {
         const css = lies('src/styles/foxi.css');
-        expect(css).toMatch(/#app\s*\{[\s\S]*height:\s*100%;[\s\S]*height:\s*100vh;[\s\S]*height:\s*100dvh;/);
+        /* Nur die Regeln, ohne den erklärenden Kommentar darin. */
+        const app = css.match(/\n#app\s*\{([^}]*)\}/)[1].replace(/\/\*[\s\S]*?\*\//g, '');
+        expect(app).toMatch(/position:\s*fixed;/);
+        expect(app).toMatch(/inset:\s*0;/);
+        /* Keine Höhe aus `vh`/`dvh`: Genau die stand in installierten
+           Web-Apps zeitweise falsch und schob die Leiste aus dem Bild. */
+        expect(app).not.toMatch(/height:\s*100d?vh/);
         expect(css).toContain('minmax(0, 1fr)');
         expect(css).toContain('calc(var(--tableiste-height) + env(safe-area-inset-bottom))');
+    });
+
+    it('sperrt den Doppeltipp-Zoom, lässt Zwei-Finger-Zoom aber zu', () => {
+        const css = lies('src/styles/foxi.css');
+        expect(css).toMatch(/html,\s*body,\s*body \*\s*\{\s*touch-action:\s*manipulation;/);
+        const html = lies('index.html');
+        expect(html).not.toMatch(/user-scalable\s*=\s*no|maximum-scale/);
     });
 });

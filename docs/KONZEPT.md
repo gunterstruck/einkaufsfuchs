@@ -910,14 +910,41 @@ verschoben ist, während niemand tippt, und holt es zurück. Die Prüfstrecke
 hält beides fest: dass kein Feld unter 16 px liegt und dass das Blatt keine
 Tastatur öffnet.
 
+**Zweite Runde (0.14.2): dieselbe Beschwerde ohne Tastatur.** „Manchmal finde
+ich in der Einkaufsliste die Leiste unten nicht mehr, und dann hilft nur,
+die App zu löschen." Diesmal war keine Tastatur im Spiel, und zwei weitere
+Wege führen zum selben Bild:
+
+1. **Doppeltipp-Zoom.** In der Liste tippt man oft zweimal kurz auf dieselbe
+   Zeile: abhaken, gleich zurückholen. iOS liest das als Doppeltipp und
+   zoomt heran. `touch-action: manipulation` auf allem außer dem Ziehgriff
+   nimmt genau diesen Zoom weg; Zwei-Finger-Zoom bleibt erlaubt, weil er für
+   Menschen mit schwachen Augen gebraucht wird.
+2. **Veraltete Bildschirmhöhe.** `#app` war `100dvh` hoch. Installierte
+   Web-Apps melden diese Einheit nach Tastatur oder Rückkehr aus dem
+   Hintergrund zeitweise falsch; dann ist die App höher als der Bildschirm.
+   Jetzt hängt `#app` mit `position: fixed; inset: 0` an den Fensterkanten
+   und fragt keine Einheit mehr ab.
+
+Dazu prüft `rahmenZurueckholen()` jetzt auch beim Zurückkehren aus dem
+Hintergrund (`visibilitychange`). Eine installierte App wird dabei nicht neu
+geladen; sie steht da, wie man sie verlassen hat – samt jedem Fehler. Genau
+deshalb half zuletzt nur Löschen, und Löschen ist auf dem iPhone das
+Schlimmste: Es nimmt Liste und Kaufhistorie mit.
+
+Welche der beiden Ursachen auf dem betroffenen iPhone zuschlug, ließ sich
+hier nicht nachstellen – Chromium zoomt bei Doppeltipp nicht. Die Prüfstrecke
+hält fest, dass die Sperre auf Karte, Reiter und Seite sitzt und dass die
+Leiste am unteren Rand bleibt, wenn sich die Fensterhöhe ändert.
+
 ---
 
 ## 11. Prüfen
 
 ```bash
-npm test                    # 231 Unit-Tests: Sortierung, Suche, Gruppierung,
+npm test                    # 232 Unit-Tests: Sortierung, Suche, Gruppierung,
                             # Exporte, Import, Datenintegrität
-node tools/durchlauf.mjs    # 103 Prüfungen im echten Browser (Chromium,
+node tools/durchlauf.mjs    # 105 Prüfungen im echten Browser (Chromium,
                             # iPhone-13-Profil) + die Bilder in docs/bilder/
 ```
 

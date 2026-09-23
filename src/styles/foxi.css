@@ -20,13 +20,39 @@
    Gerüst
    ──────────────────────────────────────────────────────────────────────── */
 
+/* Kein Heranzoomen durch Doppeltipp.
+
+   In der Liste tippt man oft zweimal kurz hintereinander auf dieselbe Zeile:
+   abhaken, und gleich wieder zurückholen. iOS versteht das als Doppeltipp
+   und zoomt die ganze App heran. Danach liegt die untere Leiste außerhalb
+   des Bildes – man kommt nicht mehr an Katalog und Mehr, und das bleibt
+   so, auch wenn man zwischendurch in eine andere App wechselt.
+
+   `manipulation` nimmt genau den Doppeltipp-Zoom weg. Mit zwei Fingern
+   heranzoomen bleibt möglich; wer größere Schrift braucht, soll sie
+   bekommen. Nur `body *` statt `*`, damit der Ziehgriff mit seinem
+   eigenen `touch-action: none` (weiter unten) die Oberhand behält. */
+html,
+body,
+body * {
+    touch-action: manipulation;
+}
+
 #app {
-    /* Dreistufiger Höhen-Fallback: Einige installierte Android-WebViews
-       melden `dvh`, berechnen es nach einem App-Update aber zeitweise falsch.
-       Dann darf die Navigation nicht unter die lange Liste rutschen. */
-    height: 100%;
-    height: 100vh;
-    height: 100dvh;
+    /* Fest an die vier Kanten statt `height: 100dvh`.
+
+       Die Höhe aus einer Viewport-Einheit rechnen lassen ging in
+       installierten Web-Apps nicht immer gut: Einige Android-WebViews
+       berechnen `dvh` nach einem App-Update zeitweise falsch, und iOS lässt
+       die Einheit nach dem Schließen der Tastatur oder dem Zurückkehren aus
+       dem Hintergrund manchmal auf einem veralteten Wert stehen. Dann ist
+       die App höher als der Bildschirm, und die untere Leiste steht
+       darunter.
+
+       `position: fixed` mit `inset: 0` fragt keine Einheit ab: Die Kanten
+       sind die Kanten des Fensters, was immer der Browser gerade meint. */
+    position: fixed;
+    inset: 0;
     min-height: 0;
     display: grid;
     grid-template-rows:

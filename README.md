@@ -4,7 +4,7 @@
 ![Kein Konto](https://img.shields.io/badge/Kein%20Konto-kein%20Login%2C%20kein%20Backend-0f766e)
 ![PWA](https://img.shields.io/badge/PWA-offlinef%C3%A4hig-purple)
 ![MIT License](https://img.shields.io/badge/License-MIT-yellow)
-![Version](https://img.shields.io/badge/Version-0.14.1-orange)
+![Version](https://img.shields.io/badge/Version-0.14.2-orange)
 
 **Tippen statt Tippen.**
 
@@ -259,15 +259,15 @@ der Adresse erreichbar. Das ist kein Leck – dieselben Dateien liegen ohnehin
 ### Prüfen
 
 ```bash
-npm install && npm test          # 231 Unit-Tests (Logik, Daten, Import, PWA und Designsystem)
+npm install && npm test          # 232 Unit-Tests (Logik, Daten, Import, PWA und Designsystem)
 
 npm i --no-save playwright && npx playwright install chromium
-node tools/durchlauf.mjs         # 103 Prüfungen im echten Browser + Bilder
+node tools/durchlauf.mjs         # 105 Prüfungen im echten Browser + Bilder
 node tools/update-lauf.mjs       # 8 Prüfungen: Update mit zwei offenen Fenstern
 node tools/alltag-lauf.mjs       # 20 Prüfungen: Alltagsfunktionen, KI-Auftrag senden und kopieren, Gerätewechsel und Vollsicherung
 ```
 
-Die Prüfstrecke (103 Prüfungen) fährt die Abnahmekriterien ab, die man mit
+Die Prüfstrecke (105 Prüfungen) fährt die Abnahmekriterien ab, die man mit
 Unit-Tests nicht erreicht: die Zwei-Tipp-Regel, zehn simulierte Einkäufe, den
 verlustfreien Moduswechsel, Rezepte, das Ziehen der Kategorien mit Zeiger und
 mit Tastatur, den Briefing-Export aus der echten Zwischenablage und einen
@@ -388,6 +388,11 @@ in den normalen Listenexport aufgenommen.
 ---
 
 
+## Neu in 0.14.2
+
+- **Die untere Leiste bleibt erreichbar – auch nach schnellem Doppeltipp.** Wer in der Liste zweimal kurz auf dieselbe Zeile tippt (abhaken, gleich wieder zurückholen), löste auf dem iPhone den Doppeltipp-Zoom aus. Die App war dann herangezoomt, und Liste, Katalog und Mehr lagen außerhalb des Bildes. Der Doppeltipp-Zoom ist jetzt aus; mit zwei Fingern zoomen geht weiterhin.
+- **Der Rahmen hängt an den Bildschirmkanten** statt an einer berechneten Bildschirmhöhe, die installierte Web-Apps nach Tastatur oder Rückkehr aus dem Hintergrund zeitweise falsch meldeten. Beim Zurückkehren aus dem Hintergrund prüft Foxi außerdem, ob die Ansicht verschoben ist, und holt sie zurück.
+
 ## Neu in 0.14.1
 
 - **„An KI-App senden“.** Am Handy öffnet der Hauptknopf das Teilen-Menü: Claude oder ChatGPT wählen, und der Rechercheauftrag landet direkt in der App – mit dem Konto, das dort angemeldet ist. Vorher führte der Weg über die Zwischenablage und einen Link, und ein Link aus der installierten Web-App öffnet den Browser, nicht die App.
@@ -412,7 +417,7 @@ in den normalen Listenexport aufgenommen.
 
 ## Stand und was als Nächstes kommt
 
-**Gebaut (v0.14.1):** Version 1 ist inhaltlich vollständig – Basismodus,
+**Gebaut (v0.14.2):** Version 1 ist inhaltlich vollständig – Basismodus,
 lernender Katalog, Rezepte, Kategorie-Reihenfolge per Ziehen, Teilen als
 Datei mit Zusammenführung beim Import, Briefing-Export, Statistik,
 Offlinebetrieb, Installierbarkeit. Der geführte Angebotscheck verbindet Foxis

@@ -1039,6 +1039,29 @@ pruefe(rahmen.scrollY === 0 && rahmen.versatz === 0,
 pruefe(rahmen.unterkante <= rahmen.fensterhoehe + 1 && rahmen.unterkante > rahmen.fensterhoehe - 120,
     `Die untere Leiste steht im Bild (Unterkante ${rahmen.unterkante} von ${rahmen.fensterhoehe})`);
 
+/* Doppeltipp-Zoom: Zweimal kurz auf dieselbe Zeile (abhaken, zurückholen)
+   darf die App nicht heranzoomen – sonst liegt die Leiste außerhalb. Den
+   Zoom selbst kann Chromium nicht nachstellen, die Sperre schon. */
+const beruehrung = await seite.evaluate(() => ({
+    karte: getComputedStyle(document.querySelector('.listenkarte')).touchAction,
+    reiter: getComputedStyle(document.querySelector('.tab')).touchAction,
+    seite: getComputedStyle(document.body).touchAction
+}));
+pruefe(Object.values(beruehrung).every((wert) => wert === 'manipulation'),
+    `Ein Doppeltipp zoomt nicht heran (${Object.values(beruehrung).join(', ')})`);
+
+/* Die Leiste folgt dem Fenster, wenn es seine Höhe ändert – so wie beim
+   Zurückkehren aus dem Hintergrund oder nach der Tastatur. */
+const vorherGroesse = seite.viewportSize();
+await seite.setViewportSize({ width: vorherGroesse.width, height: vorherGroesse.height - 150 });
+await seite.waitForTimeout(150);
+const kleiner = await seite.evaluate(() => Math.round(document.querySelector('.tableiste').getBoundingClientRect().bottom) - window.innerHeight);
+await seite.setViewportSize(vorherGroesse);
+await seite.waitForTimeout(150);
+const wieder = await seite.evaluate(() => Math.round(document.querySelector('.tableiste').getBoundingClientRect().bottom) - window.innerHeight);
+pruefe(Math.abs(kleiner) <= 1 && Math.abs(wieder) <= 1,
+    `Die Leiste bleibt am unteren Rand, auch wenn sich die Fensterhöhe ändert (${kleiner}, ${wieder})`);
+
 /* ── Netz und Regeln ────────────────────────────────────────────────────── */
 pruefe(fremdeAnfragen.length === 0,
     `Keine fremde Adresse im Netzwerk${fremdeAnfragen.length ? `: ${fremdeAnfragen.join(', ')}` : ''}`);
