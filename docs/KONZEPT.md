@@ -426,30 +426,56 @@ Deshalb gilt an drei Stellen dieselbe Regel:
 
 #### Was die Händlerseiten hergeben – gemessen, nicht vermutet
 
-Im September 2026 wurden die acht hinterlegten Angebotsseiten mit einem
-echten Browser geöffnet (Chromium, vier Sekunden Nachladezeit), nicht nur
-als Seitentext abgerufen:
+**Erste Messung (Anfang September 2026)** mit einem echten Browser: laden,
+vier Sekunden warten, Text lesen. Ergebnis: keine Seite mit Angebotspreisen,
+vier Abweisungen. Das war **zu streng gemessen**. Der erste echte Lauf des
+Auftrags zeigte es: Bei ALDI Nord stehen nach dem Cookie-Hinweis über 600
+Preise im Text.
 
-| Händler | Ergebnis |
-|---|---|
-| ALDI Nord | Seite lädt, **kein Angebotspreis im Seitentext** |
-| ALDI Süd | **abgewiesen (HTTP 403)** |
-| Lidl | Seite lädt, nur ein Versandpreis, **keine Angebotspreise** |
-| REWE | **abgewiesen (HTTP 403)** |
-| EDEKA | **abgewiesen (HTTP 403)** |
-| Kaufland | Seite lädt, **keine Preise im dargestellten Text** (im rohen HTML schon) |
-| Netto Marken-Discount | **abgewiesen (HTTP 403)** |
-| PENNY | Seite lädt, **verlangt ausdrücklich eine Marktwahl** |
+**Zweite Messung (23.09.2026)** so, wie ein Mensch die Seite benutzt:
+Cookie-Hinweis bestätigen, bis zum Ende scrollen, Produktseiten öffnen.
 
-Die Abweisungen können an der Rechenzentrums-Adresse der Messung liegen;
-ein Assistent mit anderem Netzzugang kommt womöglich weiter. Die Folgerung
-gilt trotzdem für alle acht: **Keine Seite gibt Preise beim bloßen Aufruf
-her.** Sie stehen im Prospekt-Betrachter, werden nachgeladen oder erst nach
-der Filialwahl gezeigt. Der Auftrag sagt das deshalb ausdrücklich – samt
-der Liste, bei welchen Händlern *aus dem jeweiligen Profil* die Preise je
-Filiale gelten (`marktgebunden` in `HAENDLER`). Er nennt nur Händler, die im
-Profil vorkommen; ein Auftrag über zwei Märkte braucht keine Anleitung für
-acht.
+| Händler | Preise im Text | Gültigkeit | Filiale |
+|---|---|---|---|
+| ALDI Nord | ja, mit Grundpreis | Übersicht nur Beginn („Aktion Mo. 21.9.“), **Produktseite** „21.09 - 26.09“; Donnerstagsartikel nur „Im Angebot ab 24.09“ | gleich für alle |
+| ALDI Süd | ja, mit Grundpreis | „Wochenangebote Mo., 21.9. – Sa., 26.9.“ | **wählt selbst nach Standort** („Ist Mülheim an der Ruhr deine Filiale?“) |
+| Lidl | **nein** – Aktionsprospekt aus 66 Seitenbildern | im Titel des Prospekts | Prospekt regional; Suche zeigt nur den Onlineshop |
+| REWE | – | – | **Sicherheitsabfrage, HTTP 403** |
+| EDEKA | wenige bundesweite ohne Markt | „Gültig vom 21.09.2026 bis zum 26.09.2026“ | **Markt wählen** für den Rest; „App Preis“ |
+| Kaufland | ja | „Gültig vom 17.09. bis 23.09.“ (Woche Do–Mi) | Filiale wählen; „Mit Kaufland Card XTRA“ |
+| Netto | **nein** ohne Filiale | – | **Filiale wählen** |
+| PENNY | ja, als Liste | „bis 26.9.“ | Markt wählen; „Nur mit App“ |
+
+Daraus folgt der Auftrag seit 0.15.0:
+
+- **Je Händler ein eigener Hinweis** (`HAENDLER[].hinweis`), wörtlich im
+  Auftrag – aber nur für Händler, die im Profil vorkommen. Er sagt, wo auf
+  *dieser* Seite Preis und Gültigkeit stehen.
+- **Cookie-Hinweis und Scrollen** gehören zum Weg. Das ist keine Umgehung
+  einer Sperre, sondern die normale Benutzung der Seite. Eine
+  Sicherheitsabfrage wie bei REWE ist dagegen eine Sperre – nicht umgehen,
+  sondern `nichtGelesen`.
+- **Kein App- oder Kartenpreis als Preis.** EDEKA, PENNY, Kaufland und Lidl
+  zeigen neben dem Angebotspreis einen zweiten, der nur mit App oder
+  Kundenkarte gilt. Foxi nimmt den Preis, den jeder an der Kasse bekommt;
+  der App-Preis darf im `hinweis` stehen. Das folgt aus Regel 2 (nichts
+  hinter Login).
+- **Nur ein Beginn, kein Ende:** ALDI Nords Donnerstagsartikel gelten „ab
+  24.09“, solange der Vorrat reicht. Weglassen wäre ein verschenkter
+  Treffer, ein erfundenes Enddatum eine Behauptung. Der Mittelweg: Ende der
+  Aktionswoche (Samstag) und **sichtbar** im `hinweis` „Kein Enddatum
+  angegeben – solange Vorrat reicht“.
+- **ALDI Süd ist jetzt `marktgebunden`**, weil die Seite selbst eine
+  Filiale wählt – nach dem Standort des Rechners, auf dem der Assistent
+  läuft, nicht nach dem Wohnort.
+
+Die Beispiele im Hinweistext („21.9.“, „24.09“) veralten. Sie zeigen dem
+Assistenten das *Format*, nach dem er suchen soll, nicht das Datum.
+
+Und am Rand: Zwei Milchsorten zu je 1,11 €/l trugen beide die Marke
+„Niedrigster gefundener Grundpreis“. Sind alle Treffer gleich teuer, sagt
+die Marke nichts – sie entfällt jetzt. Gleichstand unten bei einem teureren
+Dritten bleibt markiert.
 
 **Nicht gelesen statt geraten.** Kommt ein Assistent an eine Filiale nicht
 heran, soll er nicht raten, sondern sie in `nichtGelesen` eintragen
@@ -942,7 +968,7 @@ Leiste am unteren Rand bleibt, wenn sich die Fensterhöhe ändert.
 ## 11. Prüfen
 
 ```bash
-npm test                    # 232 Unit-Tests: Sortierung, Suche, Gruppierung,
+npm test                    # 237 Unit-Tests: Sortierung, Suche, Gruppierung,
                             # Exporte, Import, Datenintegrität
 node tools/durchlauf.mjs    # 105 Prüfungen im echten Browser (Chromium,
                             # iPhone-13-Profil) + die Bilder in docs/bilder/

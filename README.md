@@ -4,7 +4,7 @@
 ![Kein Konto](https://img.shields.io/badge/Kein%20Konto-kein%20Login%2C%20kein%20Backend-0f766e)
 ![PWA](https://img.shields.io/badge/PWA-offlinef%C3%A4hig-purple)
 ![MIT License](https://img.shields.io/badge/License-MIT-yellow)
-![Version](https://img.shields.io/badge/Version-0.14.2-orange)
+![Version](https://img.shields.io/badge/Version-0.15.0-orange)
 
 **Tippen statt Tippen.**
 
@@ -259,7 +259,7 @@ der Adresse erreichbar. Das ist kein Leck – dieselben Dateien liegen ohnehin
 ### Prüfen
 
 ```bash
-npm install && npm test          # 232 Unit-Tests (Logik, Daten, Import, PWA und Designsystem)
+npm install && npm test          # 237 Unit-Tests (Logik, Daten, Import, PWA und Designsystem)
 
 npm i --no-save playwright && npx playwright install chromium
 node tools/durchlauf.mjs         # 105 Prüfungen im echten Browser + Bilder
@@ -388,6 +388,14 @@ in den normalen Listenexport aufgenommen.
 ---
 
 
+## Neu in 0.15.0
+
+- **Der KI-Auftrag kennt jeden Händler einzeln.** Die acht Angebotsseiten wurden am 23.09.2026 neu geprüft, diesmal wie ein Mensch sie benutzt: Cookie-Hinweis bestätigen, scrollen, Produktseiten öffnen. Ergebnis: ALDI Nord, ALDI Süd, Kaufland und PENNY zeigen Preise im Text, EDEKA, Netto und PENNY erst nach der Marktwahl vollständig, Lidl nur als Prospekt aus Seitenbildern, REWE stellte eine Sicherheitsabfrage. Der Auftrag enthält für jeden Händler aus dem Profil genau diesen Weg.
+- **Preis ohne App und Karte.** App-, Coupon- und Kundenkartenpreise („App Preis“, „Nur mit App“, „Kaufland Card“, Lidl Plus) werden nicht als Preis übernommen, höchstens im Hinweis genannt.
+- **Angebote nur mit Beginn** („Im Angebot ab 24.09“) gelten bis Samstag derselben Woche und tragen sichtbar „Kein Enddatum angegeben – solange Vorrat reicht“.
+- **ALDI Süd verlangt jetzt die Filiale**, weil die Seite sonst selbst eine nach Standort wählt.
+- Sind alle Treffer eines Artikels gleich teuer, entfällt die Marke „Niedrigster gefundener Grundpreis“.
+
 ## Neu in 0.14.2
 
 - **Die untere Leiste bleibt erreichbar – auch nach schnellem Doppeltipp.** Wer in der Liste zweimal kurz auf dieselbe Zeile tippt (abhaken, gleich wieder zurückholen), löste auf dem iPhone den Doppeltipp-Zoom aus. Die App war dann herangezoomt, und Liste, Katalog und Mehr lagen außerhalb des Bildes. Der Doppeltipp-Zoom ist jetzt aus; mit zwei Fingern zoomen geht weiterhin.
@@ -417,7 +425,7 @@ in den normalen Listenexport aufgenommen.
 
 ## Stand und was als Nächstes kommt
 
-**Gebaut (v0.14.2):** Version 1 ist inhaltlich vollständig – Basismodus,
+**Gebaut (v0.15.0):** Version 1 ist inhaltlich vollständig – Basismodus,
 lernender Katalog, Rezepte, Kategorie-Reihenfolge per Ziehen, Teilen als
 Datei mit Zusammenführung beim Import, Briefing-Export, Statistik,
 Offlinebetrieb, Installierbarkeit. Der geführte Angebotscheck verbindet Foxis

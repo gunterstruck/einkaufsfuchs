@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
     ANGEBOTSERGEBNIS_VERSION,
+    HAENDLER,
     aktiveAngebote,
     angeboteFuerArtikel,
     angebotStatus,
@@ -436,9 +437,31 @@ describe('Auftrag mit Preiswegen', () => {
 
     it('erklärt, wo die Preise stehen, und nennt nur die Händler aus dem Profil', () => {
         expect(auftrag).toContain('wie ein Browser darstellt');
-        expect(auftrag).toContain('Preise je Filiale gelten bei REWE.');
-        expect(auftrag).toContain('ALDI Nord, ALDI Süd: Die Wochenangebote gelten');
-        expect(auftrag).not.toContain('Preise je Filiale gelten bei REWE, EDEKA');
+        expect(auftrag).toContain('Cookie-Hinweis');
+        /* Das Demo-Profil hat ALDI Nord, ALDI Süd und REWE. */
+        expect(auftrag).toContain('Filiale wählen bei ALDI Süd, REWE:');
+        expect(auftrag).toContain('- ALDI Nord: Die Wochenangebote gelten');
+        expect(auftrag).toContain('- ALDI Nord: Nach dem Cookie-Hinweis');
+        expect(auftrag).toContain('- ALDI Süd: Die Seite nennt den Zeitraum');
+        expect(auftrag).toContain('- REWE: Bei der Prüfung stand vor der Seite eine Sicherheitsabfrage');
+        expect(auftrag).not.toContain('- Lidl:');
+        expect(auftrag).not.toContain('- EDEKA:');
+    });
+
+    it('hat für jeden der acht Händler einen gemessenen Hinweis', () => {
+        for (const eintrag of HAENDLER) {
+            expect(typeof eintrag.hinweis).toBe('string');
+            expect(eintrag.hinweis.length).toBeGreaterThan(40);
+        }
+    });
+
+    it('verlangt den Preis ohne App und Kundenkarte', () => {
+        expect(auftrag).toContain('Preise nur mit App, Kundenkarte oder Coupon');
+        expect(auftrag).toContain('ohne App und Karte');
+    });
+
+    it('regelt Angebote ohne Enddatum sichtbar statt stillschweigend', () => {
+        expect(auftrag).toContain('Kein Enddatum angegeben – solange Vorrat reicht');
     });
 
     it('lässt nicht lesbare Filialen melden statt raten', () => {
@@ -456,5 +479,27 @@ describe('Auftrag mit Preiswegen', () => {
         expect(beispiel.angebote[0].quelle).toBe('https://www.penny.de/angebote/');
         expect(pruefeAngebotsergebnis({ ...beispiel, erzeugt: '2026-09-01T08:00:00Z',
             angebote: [{ ...beispiel.angebote[0], gueltigVon: '2026-09-01', gueltigBis: '2026-09-06' }] }).gueltig).toBe(true);
+    });
+});
+
+describe('Niedrigster gefundener Grundpreis bei Gleichstand', () => {
+    const milch = (produkt, grundpreis, preis) => angebot({ produkt, grundpreis, preis });
+
+    it('markiert keinen, wenn alle gleich teuer sind', () => {
+        const gruppen = gruppiereAngebote([
+            milch('Frische Milch 3,5 %', '1,11 €/l', 1.11),
+            milch('Frische Milch 1,5 %', '1,11 €/l', 1.11)
+        ]);
+        expect(gruppen.map((g) => g.niedrigsterGefundenerGrundpreis)).toEqual([false, false]);
+    });
+
+    it('markiert beide günstigsten, wenn es einen teureren gibt', () => {
+        const gruppen = gruppiereAngebote([
+            milch('Frische Milch 3,5 %', '1,11 €/l', 1.11),
+            milch('Frische Milch 1,5 %', '1,11 €/l', 1.11),
+            milch('Bio-Milch', '1,49 €/l', 1.49)
+        ]);
+        const marke = Object.fromEntries(gruppen.map((g) => [g.produkt, g.niedrigsterGefundenerGrundpreis]));
+        expect(marke).toEqual({ 'Frische Milch 3,5 %': true, 'Frische Milch 1,5 %': true, 'Bio-Milch': false });
     });
 });
