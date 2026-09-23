@@ -23,7 +23,7 @@ import {
     zeigeQrCode, linkEinlesen
 } from './teilen.js';
 import {
-    aktuelleAngebote, rechercheAuftragKopieren, ergebnisEinfuegen,
+    aktuelleAngebote, rechercheAuftragKopieren, rechercheAuftragSenden, kannAnAppSenden, ergebnisEinfuegen,
     ergebnisdateiEinlesen, zeigeAngebotsEinfuehrung
 } from './angebote.js';
 
@@ -417,8 +417,17 @@ function angebotsradarKarte() {
     }
     if (status.nichtGelesen.length) abschnitt.append(nichtGelesenBereich(status.nichtGelesen));
 
+    /* Am Handy führt der Hauptknopf über das Teilen-Menü direkt in die
+       KI-App; Kopieren bleibt daneben. Ohne Teilen-Menü (meist am
+       Computer) bleibt es beim Kopieren. */
+    const auftragsknoepfe = kannAnAppSenden()
+        ? [
+            knopf(t('angebote.anAppSenden'), rechercheAuftragSenden, { betont: true }),
+            knopf(t('angebote.auftragKopieren'), rechercheAuftragKopieren)
+        ]
+        : [knopf(t('angebote.erneutPruefen'), rechercheAuftragKopieren, { betont: true })];
     abschnitt.append(knopfleiste(
-        knopf(t('angebote.erneutPruefen'), rechercheAuftragKopieren, { betont: true }),
+        ...auftragsknoepfe,
         knopf(t('angebote.ergebnisEinfuegen'), ergebnisEinfuegen),
         knopf(t('angebote.ergebnisdatei'), ergebnisdateiEinlesen),
         knopf(t('angebote.soGehts'), zeigeAngebotsEinfuehrung)

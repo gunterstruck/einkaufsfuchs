@@ -460,6 +460,28 @@ und ältere Foxi-Fassungen funktionieren unverändert –, wird aber, wenn es
 da ist, so eng geprüft wie der Rest: höchstens 20 Einträge, jeder Text
 begrenzt.
 
+#### Der Weg zur KI-App (0.14.1)
+
+Rückmeldung aus dem Alltag: Der Auftrag kam nicht in der Zwischenablage an,
+und der Link auf den Assistenten öffnete nicht die eigene App mit dem
+Arbeitskonto. Das Zweite ist kein Fehler, sondern die Plattform: Aus einer
+installierten Web-App öffnet ein Link den Browser. Im Browser ist man meist
+nicht oder mit einem anderen Konto angemeldet.
+
+Deshalb ist der Hauptweg am Handy jetzt das **Teilen-Menü**
+(`navigator.share({ text })`). Claude und ChatGPT stehen dort, sobald ihre
+Apps installiert sind, und der Auftrag landet in der App, mit deren Konto.
+Das umgeht Zwischenablage und Link zugleich, und es bleibt beim Grundsatz:
+Ein Mensch tippt, wählt und schickt ab; Foxi sendet nichts selbst.
+
+Kopieren bleibt daneben, am Computer ist es der Hauptweg. Es läuft jetzt auf
+zwei unabhängigen Wegen: zuerst synchron über ein unsichtbares Textfeld und
+`execCommand('copy')` (noch sicher innerhalb des Fingertipps), dann über
+`navigator.clipboard`. Warum das eine Handy den Text nicht annahm, ließ sich
+hier nicht nachstellen. Zwei Wege statt einer Vermutung. Der Alltagslauf
+verweigert die moderne Schnittstelle absichtlich und prüft, dass der Auftrag
+trotzdem ankommt. Die Gegenprobe ohne den synchronen Weg schlägt an.
+
 **Die Erlaubnisliste bleibt eng.** Naheliegend wäre, Prospekt-Sammelseiten
 (etwa kaufDA oder Marktguru) als Quelle zuzulassen, weil sie Preise oft
 lesbarer zeigen. Das bleibt bewusst aus: Eine Quelle ist das, was der Mensch

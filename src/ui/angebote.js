@@ -52,6 +52,46 @@ export function persoenlicherAuftragAlsText() {
     return alsAngebotsauftrag(persoenlichesAngebotsprofil({ region: ort(), maerkte: aktiveMaerkte(), artikel }));
 }
 
+/** Kann dieses Gerät Text an eine andere App übergeben? Am Handy ja – dort
+ *  stehen Claude und ChatGPT im Teilen-Menü, sobald ihre Apps installiert
+ *  sind. */
+export function kannAnAppSenden() {
+    return typeof navigator.share === 'function' &&
+        (typeof navigator.canShare !== 'function' || navigator.canShare({ text: 'Foxi' }));
+}
+
+/**
+ * Den Auftrag über das Teilen-Menü direkt an die KI-App geben.
+ *
+ * Warum nicht einfach ein Link auf claude.ai oder chatgpt.com: Aus einer
+ * installierten Web-App heraus öffnet ein Link den Browser, nicht die App –
+ * und im Browser ist man meist gar nicht oder mit dem falschen Konto
+ * angemeldet. Über das Teilen-Menü landet der Text in der App selbst, mit
+ * dem Konto, das dort angemeldet ist. Die Zwischenablage braucht es dafür
+ * nicht.
+ */
+export async function rechercheAuftragSenden() {
+    if (aktiveMaerkte().length === 0) {
+        melde(t('angebote.keineMaerkte'));
+        return false;
+    }
+    const text = persoenlicherAuftragAlsText();
+    if (!kannAnAppSenden()) {
+        await kopiereText(text, t('angebote.auftragKopiert'), t('angebote.auftragTitel'));
+        return true;
+    }
+    try {
+        await navigator.share({ text });
+        melde(t('angebote.auftragGesendet'));
+    } catch (fehler) {
+        if (fehler?.name === 'AbortError') { melde(t('teilen.abgebrochen')); return false; }
+        /* Teilen gescheitert, nicht abgebrochen: dann der Kopierweg samt
+           seiner eigenen Ersatzkette bis zum Text zum Mitnehmen. */
+        await kopiereText(text, t('angebote.auftragKopiert'), t('angebote.auftragTitel'));
+    }
+    return true;
+}
+
 export async function rechercheAuftragKopieren() {
     if (aktiveMaerkte().length === 0) {
         melde(t('angebote.keineMaerkte'));
@@ -200,8 +240,11 @@ function assistentenAuswahl() {
         const text = document.createElement('span');
         text.textContent = beschreibung;
         const links = document.createElement('div');
+        /* „Im Browser öffnen" statt „Öffnen": Aus der installierten
+           Web-App führt der Link in den Browser, nicht in die KI-App. Das
+           soll draufstehen. */
         links.append(
-            externerLink(t('angebote.assistentOeffnen'), oeffnen),
+            externerLink(t('angebote.imBrowserOeffnen'), oeffnen),
             externerLink(t('angebote.anleitungOeffnen'), hilfe)
         );
         karte.append(titel, text, links);
@@ -226,10 +269,12 @@ function assistentenAuswahl() {
 }
 
 /** Einmalige Schulung und später jederzeit über „So funktioniert's" erneut
- * erreichbar. Kein Link übergibt Daten automatisch; der Nutzer kopiert den
- * Auftrag bewusst selbst in den gewählten Assistenten. */
+ * erreichbar. Kein Link übergibt Daten automatisch; der Nutzer gibt den
+ * Auftrag bewusst selbst an den gewählten Assistenten – am Handy über das
+ * Teilen-Menü, sonst über die Zwischenablage. */
 export function zeigeAngebotsEinfuehrung() {
     const assistenten = assistentenAuswahl();
+    const app = kannAnAppSenden();
     zeigeDialog({
         titel: t('angebote.hilfeTitel'),
         koerper: [
@@ -238,13 +283,18 @@ export function zeigeAngebotsEinfuehrung() {
             schritt(
                 1,
                 t('angebote.schritt1Titel'),
-                t('angebote.schritt1Text'),
-                aktionsknopf(t('angebote.auftragKopieren'), rechercheAuftragKopieren, true)
+                t(app ? 'angebote.schritt1TextApp' : 'angebote.schritt1Text'),
+                ...(app
+                    ? [
+                        aktionsknopf(t('angebote.anAppSenden'), rechercheAuftragSenden, true),
+                        aktionsknopf(t('angebote.auftragKopieren'), rechercheAuftragKopieren)
+                    ]
+                    : [aktionsknopf(t('angebote.auftragKopieren'), rechercheAuftragKopieren, true)])
             ),
             schritt(
                 2,
                 t('angebote.schritt2Titel'),
-                t('angebote.schritt2Text'),
+                t(app ? 'angebote.schritt2TextApp' : 'angebote.schritt2Text'),
                 assistenten
             ),
             schritt(

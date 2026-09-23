@@ -129,17 +129,57 @@ export async function kopiereArtikel(artikel) {
     await kopiereText(artikel.name, t('teilen.kopiertArtikel', artikel.name));
 }
 
+/**
+ * Der alte Kopierweg: markierter Text in einem unsichtbaren Feld, dann
+ * `execCommand('copy')`. Veraltet, aber er läuft **synchron** – also noch
+ * sicher innerhalb des Fingertipps, den Safari für die Zwischenablage
+ * verlangt – und hängt nicht an der Berechtigung, an der
+ * `navigator.clipboard` scheitern kann.
+ *
+ * Anlass: Auf einem Handy kam der Rechercheauftrag nicht in der
+ * Zwischenablage an. Nachstellen ließ sich das hier nicht; deshalb gibt es
+ * zwei unabhängige Wege statt einem, und erst wenn beide scheitern, zeigt
+ * Foxi den Text zum Kopieren von Hand.
+ */
+function kopiereSynchron(text) {
+    const feld = document.createElement('textarea');
+    feld.className = 'kopierfeld';
+    feld.value = text;
+    /* `readonly` hält die Bildschirmtastatur fern; markieren lässt sich
+       der Inhalt trotzdem. */
+    feld.setAttribute('readonly', '');
+    feld.setAttribute('aria-hidden', 'true');
+    feld.tabIndex = -1;
+    document.body.append(feld);
+    const vorher = document.activeElement;
+    let kopiert = false;
+    try {
+        feld.focus({ preventScroll: true });
+        feld.select();
+        feld.setSelectionRange(0, text.length);
+        kopiert = document.execCommand('copy');
+    } catch {
+        kopiert = false;
+    }
+    feld.remove();
+    if (vorher instanceof HTMLElement && vorher !== document.body) vorher.focus({ preventScroll: true });
+    return kopiert;
+}
+
 /** Dieselbe ehrliche Ersatzkette auch für andere klar ausgelöste Exporte. */
 export async function kopiereText(text, erfolgsmeldung, dialogTitel = t('teilen.alsText')) {
+    /* Zuerst der synchrone Weg, solange der Fingertipp noch „frisch" ist,
+       dann zusätzlich die moderne Schnittstelle. Einer von beiden genügt. */
+    const synchron = kopiereSynchron(text);
     try {
         await navigator.clipboard.writeText(text);
         melde(erfolgsmeldung);
         return;
     } catch {
-        /* Zwischenablage verweigert (kein sicherer Kontext, keine
-           Berechtigung, Safari ohne Nutzergeste): Dann zeigen wir den Text
-           und lassen ihn von Hand nehmen, statt zu behaupten, es sei
-           kopiert. */
+        if (synchron) { melde(erfolgsmeldung); return; }
+        /* Beide Wege verweigert (kein sicherer Kontext, keine Berechtigung,
+           Safari ohne Nutzergeste): Dann zeigen wir den Text und lassen ihn
+           von Hand nehmen, statt zu behaupten, es sei kopiert. */
     }
 
     if (navigator.share) {

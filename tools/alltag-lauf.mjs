@@ -41,6 +41,32 @@ try {
     await p.locator('.dialog-knoepfe .primary').click();
     await warteBis(p, async()=> (await import('./src/zustand.js')).maerkte().length===1, 'der Markt ist gespeichert');
     ok(await p.evaluate(async()=> (await import('./src/ui/angebote.js')).persoenlicherAuftragAlsText().includes('bio.example')),'Eigener Laden und Quelle erscheinen im Rechercheauftrag');
+
+    /* Am Handy: Auftrag über das Teilen-Menü an die KI-App. Headless gibt es
+       kein Teilen-Menü, also steht hier eines, das nur mitschreibt. */
+    await p.evaluate(()=>{
+        window.__geteilt=null;
+        Object.defineProperty(navigator,'share',{configurable:true,value:async(daten)=>{window.__geteilt=daten;}});
+        Object.defineProperty(navigator,'canShare',{configurable:true,value:()=>true});
+    });
+    await p.getByRole('button',{name:'Geführt einrichten',exact:true}).click();
+    await p.getByRole('button',{name:'An KI-App senden',exact:true}).click();
+    await warteBis(p,()=>window.__geteilt!==null,'der Auftrag ist geteilt');
+    ok(await p.evaluate(()=>window.__geteilt.text.includes('WÖCHENTLICHER FOXI-ANGEBOTSRADAR')&&window.__geteilt.text.includes('Bioladen Grün')),'„An KI-App senden“ übergibt den vollständigen Auftrag an das Teilen-Menü');
+    ok((await p.locator('.angebote-assistent a').allTextContents()).includes('Im Browser öffnen'),'Die Assistenten-Links sagen, dass sie den Browser öffnen');
+
+    /* Kopieren, wenn `navigator.clipboard.writeText` verweigert: Der
+       synchrone Weg muss den Auftrag trotzdem in die Zwischenablage legen. */
+    await p.evaluate(async()=>{
+        await navigator.clipboard.writeText('vorher');
+        Object.defineProperty(navigator.clipboard,'writeText',{configurable:true,value:()=>Promise.reject(new DOMException('verweigert','NotAllowedError'))});
+    });
+    await p.getByRole('button',{name:'Rechercheauftrag kopieren',exact:true}).click();
+    await warteBis(p,async()=>(await navigator.clipboard.readText()).includes('WÖCHENTLICHER FOXI-ANGEBOTSRADAR'),'der Auftrag liegt in der Zwischenablage',5000);
+    ok(true,'Verweigert die Zwischenablage-Schnittstelle, kopiert der synchrone Weg den Auftrag trotzdem');
+    ok(await p.locator('.dialog-text').count()===0,'Dabei erscheint kein Ersatzdialog zum Kopieren von Hand');
+    await p.evaluate(()=>{delete navigator.clipboard.writeText;delete navigator.share;delete navigator.canShare;});
+    await p.locator('.dialog-abbruch').click();
     await p.evaluate(async()=> {
         const z=await import('./src/zustand.js'), db=await import('./src/db.js');
         const milch=z.zustand.artikel.get('milch');milch.letzteKaeufe=[28,21,14,7].map(n=>Date.now()-n*86400000);milch.zaehler=4;

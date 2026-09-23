@@ -4,7 +4,7 @@
 ![Kein Konto](https://img.shields.io/badge/Kein%20Konto-kein%20Login%2C%20kein%20Backend-0f766e)
 ![PWA](https://img.shields.io/badge/PWA-offlinef%C3%A4hig-purple)
 ![MIT License](https://img.shields.io/badge/License-MIT-yellow)
-![Version](https://img.shields.io/badge/Version-0.14.0-orange)
+![Version](https://img.shields.io/badge/Version-0.14.1-orange)
 
 **Tippen statt Tippen.**
 
@@ -264,7 +264,7 @@ npm install && npm test          # 231 Unit-Tests (Logik, Daten, Import, PWA und
 npm i --no-save playwright && npx playwright install chromium
 node tools/durchlauf.mjs         # 103 Prüfungen im echten Browser + Bilder
 node tools/update-lauf.mjs       # 8 Prüfungen: Update mit zwei offenen Fenstern
-node tools/alltag-lauf.mjs       # 16 Prüfungen: neue Alltagsfunktionen, Gerätewechsel und Vollsicherung
+node tools/alltag-lauf.mjs       # 20 Prüfungen: Alltagsfunktionen, KI-Auftrag senden und kopieren, Gerätewechsel und Vollsicherung
 ```
 
 Die Prüfstrecke (103 Prüfungen) fährt die Abnahmekriterien ab, die man mit
@@ -388,6 +388,12 @@ in den normalen Listenexport aufgenommen.
 ---
 
 
+## Neu in 0.14.1
+
+- **„An KI-App senden“.** Am Handy öffnet der Hauptknopf das Teilen-Menü: Claude oder ChatGPT wählen, und der Rechercheauftrag landet direkt in der App – mit dem Konto, das dort angemeldet ist. Vorher führte der Weg über die Zwischenablage und einen Link, und ein Link aus der installierten Web-App öffnet den Browser, nicht die App.
+- **Kopieren hat einen zweiten Weg.** Verweigert das Gerät die moderne Zwischenablage, kopiert Foxi zusätzlich auf dem älteren, synchronen Weg. Erst wenn beide scheitern, zeigt es den Text zum Kopieren von Hand.
+- Die Links zu den Assistenten heißen jetzt ehrlich „Im Browser öffnen“.
+
 ## Neu in 0.14.0
 
 - **Die Filiale steht immer dabei.** Auf der Einkaufsliste heißt ein Angebot jetzt „Angebot · 0,99 € · ALDI Nord Schürmannstraße 43b · bis …“ statt nur „ALDI Nord“. Gilt es in mehreren Filialen, steht die erste beim Namen und die übrigen gezählt; bei mehreren Angeboten die Filiale des günstigsten. Unter „Mehr“ stehen alle Filialen in der Zeile, die vollständigen Adressen aufklappbar.
@@ -406,7 +412,7 @@ in den normalen Listenexport aufgenommen.
 
 ## Stand und was als Nächstes kommt
 
-**Gebaut (v0.14.0):** Version 1 ist inhaltlich vollständig – Basismodus,
+**Gebaut (v0.14.1):** Version 1 ist inhaltlich vollständig – Basismodus,
 lernender Katalog, Rezepte, Kategorie-Reihenfolge per Ziehen, Teilen als
 Datei mit Zusammenführung beim Import, Briefing-Export, Statistik,
 Offlinebetrieb, Installierbarkeit. Der geführte Angebotscheck verbindet Foxis
