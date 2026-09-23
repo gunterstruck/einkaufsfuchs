@@ -9,7 +9,7 @@
  * So bleiben Eingaben und die laufende App-Schale bei einem Update erhalten.
  */
 
-const CACHE = 'einkaufsfuchs-v0.14.0';
+const CACHE = 'einkaufsfuchs-v0.14.1';
 
 const SCHALE = [
     './',
@@ -41,13 +41,13 @@ const SCHALE = [
     'src/ui/artikelblatt.js',
     'src/daten/katalog.json',
     'src/daten/rezepte.json',
-    'favicon.ico?v=0.14.0',
-    'icons/foxi.svg?v=0.14.0',
-    'icons/favicon-64.png?v=0.14.0',
-    'icons/icon-192.png?v=0.14.0',
-    'icons/icon-512.png?v=0.14.0',
-    'icons/maskable-512.png?v=0.14.0',
-    'icons/apple-touch-icon.png?v=0.14.0'
+    'favicon.ico?v=0.14.1',
+    'icons/foxi.svg?v=0.14.1',
+    'icons/favicon-64.png?v=0.14.1',
+    'icons/icon-192.png?v=0.14.1',
+    'icons/icon-512.png?v=0.14.1',
+    'icons/maskable-512.png?v=0.14.1',
+    'icons/apple-touch-icon.png?v=0.14.1'
 ];
 
 self.addEventListener('install', (ereignis) => {

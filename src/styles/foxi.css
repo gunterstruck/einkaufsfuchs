@@ -1035,6 +1035,21 @@ body:not(.modus-experte) .experte-nur { display: none !important; }
     color: var(--color-text);
     resize: vertical;
 }
+/* Das unsichtbare Feld für den synchronen Kopierweg (`kopiereSynchron` in
+   teilen.js). Fest oben links, damit das Markieren nichts verrollt; 16px,
+   damit iOS beim kurzen Fokus nicht hineinzoomt. */
+.kopierfeld {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    border: 0;
+    opacity: 0;
+    font-size: 16px;
+    pointer-events: none;
+}
 .dialog-knoepfe {
     display: flex;
     flex-wrap: wrap;

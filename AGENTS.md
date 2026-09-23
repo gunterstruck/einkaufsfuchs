@@ -58,7 +58,7 @@ QR-Code mehr.
 npm run dev                 # http://localhost:8080 – ohne npm install
 npm install && npm test     # 231 Unit-Tests
 node tools/durchlauf.mjs    # 103 Prüfungen im echten Browser + Bilder
-node tools/alltag-lauf.mjs  # 16 neue Alltagsprüfungen
+node tools/alltag-lauf.mjs  # 20 Alltagsprüfungen
 node tools/update-lauf.mjs  # 8 Updateprüfungen
 ```
 

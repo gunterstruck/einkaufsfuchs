@@ -270,6 +270,10 @@ const DE = {
         auftragTitel: 'Foxi-Rechercheauftrag',
         auftragKopieren: 'Rechercheauftrag kopieren',
         auftragKopiert: 'Rechercheauftrag in der Zwischenablage',
+        /* Am Handy der Hauptweg: Teilen-Menü → Claude- oder ChatGPT-App.
+           Siehe `rechercheAuftragSenden` in ui/angebote.js. */
+        anAppSenden: 'An KI-App senden',
+        auftragGesendet: 'Auftrag übergeben – in der KI-App absenden',
         erneutPruefen: 'Erneut recherchieren',
         ergebnisEinfuegen: 'Aus Zwischenablage übernehmen',
         ergebnisdatei: 'Ergebnisdatei auswählen',
@@ -322,13 +326,17 @@ const DE = {
         schritt1Titel: 'Auftrag aus Foxi kopieren',
         schritt1Text:
             'Der Auftrag enthält Suchregeln, gewünschte Artikel, ausgewählte Märkte und das Rückgabeformat.',
+        schritt1TextApp:
+            'Der Auftrag enthält Suchregeln, gewünschte Artikel, ausgewählte Märkte und das Rückgabeformat. „An KI-App senden“ öffnet das Teilen-Menü: Dort Claude oder ChatGPT wählen – der Auftrag landet direkt in der App, mit dem Konto, das dort angemeldet ist.',
         schritt2Titel: 'KI-Recherche-Assistent wählen',
         schritt2Text:
             'Füge den Auftrag in einen Assistenten mit Webrecherche ein. Optional kannst du ihn dort als wöchentliche Aufgabe planen.',
+        schritt2TextApp:
+            'Nutze einen Assistenten mit Webrecherche und sende den Auftrag dort ab. Optional kannst du ihn als wöchentliche Aufgabe planen. Die Links unten öffnen den Browser, nicht die App – dort bist du womöglich mit einem anderen Konto angemeldet.',
         schritt3Titel: 'Treffer zurück zu Foxi',
         schritt3Text:
             'Der Assistent liefert möglichst eine Foxi-Datei. Alternativ kopierst du sein vollständiges Ergebnis und fügst es hier ein.',
-        assistentOeffnen: 'Öffnen',
+        imBrowserOeffnen: 'Im Browser öffnen',
         anleitungOeffnen: 'Aufgaben einrichten',
         claudeText: 'Cowork kann wiederkehrende Webrecherchen und Dateien bearbeiten.',
         chatgptText: 'Geplante Aufgaben können regelmäßig im Web nach Änderungen suchen.',
