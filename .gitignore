@@ -1,6 +1,9 @@
 # Abhängigkeiten – Foxi hat zur Laufzeit keine; hier landen nur die
-# Werkzeuge für Tests und die Prüfstrecke.
+# Werkzeuge für Tests und die Prüfstrecke. Auch die Sperrdatei bleibt
+# draußen: Sie beschreibt nur diese Werkzeuge, und wer die Prüfstrecke
+# fährt, installiert sie ohnehin frisch (`npm i --no-save playwright`).
 node_modules/
+package-lock.json
 
 # Editor
 .vscode/

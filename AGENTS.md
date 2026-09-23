@@ -65,6 +65,9 @@ node tools/update-lauf.mjs  # 8 Updateprüfungen
 Für die Prüfstrecke einmalig:
 `npm i --no-save playwright && npx playwright install chromium`
 
+Wo schon ein Chromium liegt, sagt es `FOXI_CHROMIUM=/pfad/zu/chrome` – alle
+vier Läufe verstehen die Variable.
+
 **Beides muss grün sein, bevor du pushst.** Die Prüfstrecke hat in diesem
 Projekt drei echte Fehler gefunden, die kein Nachdenken gefunden hätte – sie
 fährt einen echten Browser, misst die Zwischenablage, zählt jede

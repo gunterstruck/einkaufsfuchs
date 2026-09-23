@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { chromium, devices } from 'playwright';
+import { warteBis } from './warten.mjs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { mkdirSync } from 'node:fs';
@@ -13,7 +14,10 @@ let checks=0;
 const ok=(value,message)=>{assert.ok(value,message);checks++;console.log('✓ '+message);};
 try {
     for(let i=0;i<50;i++){try{await fetch(url);break;}catch{await new Promise(r=>setTimeout(r,100));}}
-    browser=await chromium.launch();
+    /* Wie in `durchlauf.mjs`: Wo der Browser liegt, darf die Umgebung sagen.
+       Ohne diesen Ausweg lässt sich der Lauf dort nicht starten, wo Chromium
+       schon installiert ist, aber nicht an Playwrights Standardstelle. */
+    browser=await chromium.launch(process.env.FOXI_CHROMIUM?{executablePath:process.env.FOXI_CHROMIUM}:{});
     const a=await browser.newContext({...devices['iPhone 13'],permissions:['clipboard-read','clipboard-write']});
     const b=await browser.newContext({...devices['iPhone 13']});
     const p=await a.newPage(),q=await b.newPage();
@@ -22,7 +26,7 @@ try {
         page.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
         page.on('request',r=>{if(!r.url().startsWith(url)&&!r.url().startsWith('data:')&&!r.url().startsWith('blob:'))foreign.push(r.url());});
         await page.goto(url,{waitUntil:'networkidle'});
-        await page.waitForFunction(async()=> (await import('./src/zustand.js')).zustand.bereit);
+        await warteBis(page, async()=> (await import('./src/zustand.js')).zustand.bereit, 'Foxi ist geladen');
     }
     await p.locator('#tab-mehr').click();
     await p.locator('.meine-maerkte summary').click();
@@ -35,7 +39,7 @@ try {
     ok(await p.locator('.dialog').count()===1,'Ungültige Händlerquelle lässt den Dialog zur Korrektur offen');
     await p.getByRole('textbox',{name:'Offizielle Angebotsseite (optional, https://…)',exact:true}).fill('https://bio.example/angebote');
     await p.locator('.dialog-knoepfe .primary').click();
-    await p.waitForFunction(async()=> (await import('./src/zustand.js')).maerkte().length===1);
+    await warteBis(p, async()=> (await import('./src/zustand.js')).maerkte().length===1, 'der Markt ist gespeichert');
     ok(await p.evaluate(async()=> (await import('./src/ui/angebote.js')).persoenlicherAuftragAlsText().includes('bio.example')),'Eigener Laden und Quelle erscheinen im Rechercheauftrag');
     await p.evaluate(async()=> {
         const z=await import('./src/zustand.js'), db=await import('./src/db.js');
@@ -48,7 +52,7 @@ try {
     await p.screenshot({path:join(root,'..','review-images','wiederkauf.png')});
     ok((await p.locator('.wiederkauf').textContent()).includes('ungefähr alle 7 Tage'),'Wiederkauf zeigt nachvollziehbaren Rhythmus');
     await p.getByRole('button',{name:'Noch genug',exact:true}).click();
-    await p.waitForFunction(async()=> Boolean((await import('./src/zustand.js')).zustand.einstellungen.wiederkaufSpaeter.milch));
+    await warteBis(p, async()=> Boolean((await import('./src/zustand.js')).zustand.einstellungen.wiederkaufSpaeter.milch), '„Noch genug" ist vermerkt');
     await p.reload({waitUntil:'networkidle'});
     ok(await p.locator('.wiederkauf').count()===0,'Noch genug überlebt einen Neustart');
     await p.evaluate(async()=> {
@@ -64,7 +68,7 @@ try {
     await p.screenshot({path:join(root,'..','review-images','laufweg.png')});
     ok(await p.getByRole('button',{name:'Diesen Laufweg merken'}).count()===1,'Nach drei Einkäufen wird ein Laufweg angeboten');
     await p.getByRole('button',{name:'Diesen Laufweg merken'}).click();
-    await p.waitForFunction(async()=> Object.values((await import('./src/zustand.js')).zustand.einstellungen.laufwege)[0].reihenfolge.length>0);
+    await warteBis(p, async()=> Object.values((await import('./src/zustand.js')).zustand.einstellungen.laufwege)[0].reihenfolge.length>0, 'der Laufweg ist gespeichert');
     await p.locator('.laufweg summary').click();
     await p.getByRole('button',{name:'Einkauf starten',exact:true}).click();
     await p.getByRole('button',{name:'Einkauf beenden',exact:true}).waitFor();
@@ -74,7 +78,7 @@ try {
     const link1=await p.evaluate(async()=> (await import('./src/ui/teilen.js')).aktuelleQrAdresse());
     await q.goto(link1,{waitUntil:'networkidle'});
     await q.getByRole('button',{name:'Auswahl übernehmen'}).click();
-    await q.waitForFunction(async()=> (await import('./src/zustand.js')).zustand.liste.size===2);
+    await warteBis(q, async()=> (await import('./src/zustand.js')).zustand.liste.size===2, 'das zweite Gerät hat zwei Artikel');
     await q.evaluate(async()=> (await import('./src/zustand.js')).produktwunschSetzen('milch','3 l'));
     await p.evaluate(async()=>{const z=await import('./src/zustand.js');await z.produktwunschSetzen('milch','2 l');await z.vonListeNehmen('butter');await z.aufListeSetzen('eier');});
     const link2=await p.evaluate(async()=> (await import('./src/ui/teilen.js')).aktuelleQrAdresse());
@@ -82,7 +86,7 @@ try {
     ok((await q.locator('.dialog-koerper').textContent()).includes('Auch bei dir geändert'),'Zweites Gerät erkennt parallele Mengenänderung');
     ok(await q.locator('.stand-aenderung input:checked').count()===1,'Nur konfliktfreie neue Artikel vorausgewählt');
     await q.getByRole('button',{name:'Auswahl übernehmen'}).click();
-    await q.waitForFunction(async()=> (await import('./src/zustand.js')).zustand.liste.has('eier'));
+    await warteBis(q, async()=> (await import('./src/zustand.js')).zustand.liste.has('eier'), 'die Eier sind angekommen');
     ok(await q.evaluate(async()=>{const z=await import('./src/zustand.js');return z.zustand.liste.get('milch').menge==='3 l'&&z.zustand.liste.has('butter');}),'Lokale Menge und nicht bestätigte Löschung bleiben erhalten');
     await q.goto(link1,{waitUntil:'networkidle'});
     ok(await q.locator('.dialog').count()===0,'Älterer Link wird nicht erneut übernommen');
@@ -100,10 +104,10 @@ try {
     await q.getByRole('button',{name:'Vollsicherung wiederherstellen',exact:true}).click();
     await (await chooser).setFiles(pfad);
     await Promise.all([q.waitForNavigation({waitUntil:'networkidle'}), q.getByRole('button',{name:'Lokale Daten durch Sicherung ersetzen',exact:true}).click()]);
-    await q.waitForFunction(async()=> (await import('./src/zustand.js')).zustand.liste.has('milch'));
+    await warteBis(q, async()=> (await import('./src/zustand.js')).zustand.liste.has('milch'), 'die Milch ist angekommen');
     ok(await q.evaluate(async()=> (await import('./src/zustand.js')).zustand.liste.get('milch').menge==='3 l'),'Vollsicherung stellt Listeninhalt im Browser wieder her');
     await a.setOffline(true);await p.reload({waitUntil:'domcontentloaded'});
-    await p.waitForFunction(async()=> (await import('./src/zustand.js')).zustand.bereit);
+    await warteBis(p, async()=> (await import('./src/zustand.js')).zustand.bereit, 'Foxi ist nach dem Neustart bereit');
     ok(await p.locator('#liste-inhalt').isVisible(),'Neue Fassung startet vollständig offline');
     mkdirSync(join(root,'..','review-images'),{recursive:true});
     await q.screenshot({path:join(root,'..','review-images','alltag-mobil.png')});
