@@ -503,6 +503,52 @@ const eingefuegterText = await seite.locator('.angebotsliste').textContent();
 pruefe(eingefuegterText?.includes('Milch') && eingefuegterText.includes('0,99 €'),
     'Ein kopiertes JSON-Ergebnis lässt sich direkt einfügen');
 
+/* Ein persönliches Ergebnis, wie ein Assistent es schreibt: die gespeicherte
+   REWE-Filiale in anderer Schreibweise, ein Angebot „für alle Filialen" und
+   eine Filiale, die er nicht lesen konnte. Foxi ordnet die erste zu, lässt
+   das zweite sichtbar weg und zeigt das dritte an. */
+const persoenlichesErgebnis = {
+    ...structuredClone(agentenergebnis),
+    profilId: 'foxi-persoenlich',
+    demo: false,
+    angebote: [
+        {
+            ...structuredClone(agentenergebnis.angebote[0]),
+            haendler: 'REWE',
+            markt: 'Rellinghauser Str. 239, 45136 Essen',
+            produkt: 'ja! Frische Vollmilch',
+            preis: 1.05,
+            grundpreis: '1,05 €/l',
+            quelle: 'https://www.rewe.de/angebote/'
+        },
+        {
+            ...structuredClone(agentenergebnis.angebote[0]),
+            haendler: 'REWE',
+            markt: 'alle Filialen',
+            quelle: 'https://www.rewe.de/angebote/'
+        }
+    ],
+    nichtGelesen: [{ haendler: 'REWE', markt: 'Rellinghauser Straße 239, Essen', grund: 'Prospekt nicht lesbar' }]
+};
+await seite.waitForSelector('#toast', { state: 'hidden' });
+await seite.locator('button', { hasText: 'Aus Zwischenablage übernehmen' }).tap();
+await seite.waitForSelector('.angebote-eingabe');
+await seite.locator('.angebote-eingabe').fill(JSON.stringify(persoenlichesErgebnis, null, 2));
+await seite.locator('.dialog-knoepfe .primary').tap();
+await seite.waitForSelector('#toast:not([hidden])');
+const zuordnungsMeldung = await seite.locator('#toast').textContent();
+pruefe(zuordnungsMeldung?.includes('1 aktuelles Angebot übernommen') &&
+    zuordnungsMeldung.includes('1 ohne Filiale'),
+    `Ein Angebot ohne Filiale aus „Meine Märkte" wird sichtbar ausgelassen (${zuordnungsMeldung})`);
+await seite.waitForSelector('.angebote-details', { state: 'attached' });
+await seite.locator('.angebote-details > summary').tap();
+const zugeordnet = await seite.locator('.angebotsliste').textContent();
+pruefe(zugeordnet?.includes('REWE · Rellinghauser Straße 239, Essen'),
+    'Eine andere Schreibweise wird der gespeicherten Filiale zugeordnet');
+pruefe((await seite.locator('.angebote-nichtgelesen > summary').textContent())
+    ?.includes('1 Filiale konnte der Assistent nicht lesen'),
+    'Was der Assistent nicht lesen konnte, steht mit Filiale in der Karte');
+
 const dateiErgebnis = structuredClone(agentenergebnis);
 dateiErgebnis.angebote.push({
     ...structuredClone(agentenergebnis.angebote[0]),
@@ -540,8 +586,8 @@ pruefe(angebotsText?.includes('Milch') && angebotsText.includes('0,99 €') &&
     angebotsText.includes('ALDI Süd'),
     `Ein geprüftes Rechercheergebnis erscheint in Foxi (${angebotsText?.trim()})`);
 pruefe(await seite.locator('.angebotsliste > li').count() === 2 &&
-    angebotsText.includes('2 ausgewählte Filialen'),
-    'Dasselbe Angebot aus zwei Filialen erscheint nur einmal');
+    angebotsText.includes('ALDI Nord · Schürmannstraße 43b, Steeler Straße 187'),
+    'Dasselbe Angebot aus zwei Filialen erscheint nur einmal – mit beiden Filialen beim Namen');
 await seite.locator('.angebote-karte').scrollIntoViewIfNeeded();
 await seite.waitForSelector('#toast', { state: 'hidden' });
 await seite.screenshot({ path: join(bilder, '13-angebotsradar.png') });
@@ -563,6 +609,9 @@ const milchAngebot = await seite.locator('[data-artikel-id="milch"] .karte-angeb
 const butterAngebot = await seite.locator('[data-artikel-id="butter"] .karte-angebot').textContent();
 pruefe(milchAngebot?.includes('0,99 €') && milchAngebot.includes('ALDI Nord'),
     `Die Einkaufsliste zeigt den passenden Preis direkt an (${milchAngebot})`);
+pruefe(milchAngebot?.includes('ALDI Nord Schürmannstraße 43b + 1 weitere Filiale') &&
+    butterAngebot?.includes('ALDI Süd Humboldtring 5'),
+    `Die Einkaufsliste nennt immer die Filiale (${butterAngebot})`);
 pruefe(butterAngebot?.includes('Alternative') && butterAngebot.includes('1,49 €'),
     `Alternativen sind auf der Liste eindeutig gekennzeichnet (${butterAngebot})`);
 await seite.waitForSelector('#toast', { state: 'hidden' });

@@ -398,6 +398,75 @@ Detail vollständig nachvollziehbar.
 Grundpreistext. Solche gespeicherten Ergebnisse verschwinden nicht, nehmen
 aber am Preisvergleich nicht teil – abwerten statt wegwerfen.
 
+#### Die Filiale gehört zu jedem Angebot (0.14.0)
+
+Ein Preis ohne Laden schickt einen in den falschen Markt. Bei REWE, EDEKA,
+Kaufland, Netto und PENNY gilt ein Angebot ohnehin nur in der gewählten
+Filiale; und selbst bei ALDI will man wissen, *welcher* ALDI gemeint ist.
+Deshalb gilt an drei Stellen dieselbe Regel:
+
+- **Im Auftrag:** Jedes Angebot nennt genau eine Filiale aus dem Profil,
+  wortgleich. Keine Sammelangaben („alle Filialen", „bundesweit"); ein
+  Angebot für mehrere Filialen wird je Filiale eingetragen – Foxi fasst es
+  selbst wieder zusammen. Das Beispiel im Ausgabeformat zeigt die erste
+  Filiale des Profils, weil ein Assistent am Beispiel schneller lernt als an
+  einer Regel.
+- **Beim Einlesen:** `filialenZuordnen()` ordnet jedes Angebot einer
+  gespeicherten Filiale zu, auch in anderer Schreibweise (Groß-/Klein,
+  ß/ss, Umlaute, „Str.", Satzzeichen). Passt nur Straße und Hausnummer, gilt
+  das nur, wenn es genau **eine** Filiale trifft – zwischen zweien wird nicht
+  geraten. Was keine Filiale trifft, wird **weggelassen und gezählt**, nicht
+  still verschluckt und nicht zum Anlass, das ganze Ergebnis zu verwerfen.
+  Ein Demo-Ergebnis wird am Demo-Profil gemessen, jedes andere an
+  „Meine Märkte".
+- **In der Anzeige:** Die Listenzeile nennt die Filiale beim Namen
+  („REWE Rellinghauser Straße 239"), bei mehreren die erste und die Zahl der
+  übrigen. Beim sonstigen Laden steht der Name im Feld `markt`, daher zählen
+  dort Name *und* Straße.
+
+#### Was die Händlerseiten hergeben – gemessen, nicht vermutet
+
+Im September 2026 wurden die acht hinterlegten Angebotsseiten mit einem
+echten Browser geöffnet (Chromium, vier Sekunden Nachladezeit), nicht nur
+als Seitentext abgerufen:
+
+| Händler | Ergebnis |
+|---|---|
+| ALDI Nord | Seite lädt, **kein Angebotspreis im Seitentext** |
+| ALDI Süd | **abgewiesen (HTTP 403)** |
+| Lidl | Seite lädt, nur ein Versandpreis, **keine Angebotspreise** |
+| REWE | **abgewiesen (HTTP 403)** |
+| EDEKA | **abgewiesen (HTTP 403)** |
+| Kaufland | Seite lädt, **keine Preise im dargestellten Text** (im rohen HTML schon) |
+| Netto Marken-Discount | **abgewiesen (HTTP 403)** |
+| PENNY | Seite lädt, **verlangt ausdrücklich eine Marktwahl** |
+
+Die Abweisungen können an der Rechenzentrums-Adresse der Messung liegen;
+ein Assistent mit anderem Netzzugang kommt womöglich weiter. Die Folgerung
+gilt trotzdem für alle acht: **Keine Seite gibt Preise beim bloßen Aufruf
+her.** Sie stehen im Prospekt-Betrachter, werden nachgeladen oder erst nach
+der Filialwahl gezeigt. Der Auftrag sagt das deshalb ausdrücklich – samt
+der Liste, bei welchen Händlern *aus dem jeweiligen Profil* die Preise je
+Filiale gelten (`marktgebunden` in `HAENDLER`). Er nennt nur Händler, die im
+Profil vorkommen; ein Auftrag über zwei Märkte braucht keine Anleitung für
+acht.
+
+**Nicht gelesen statt geraten.** Kommt ein Assistent an eine Filiale nicht
+heran, soll er nicht raten, sondern sie in `nichtGelesen` eintragen
+(Händler, Filiale, kurzer Grund). Foxi zeigt diese Liste unter dem Status an.
+Ohne sie ist „kein Angebot" nicht von „nicht nachgesehen" zu unterscheiden.
+Das Feld ist freiwillig – die Vertragsfassung bleibt 2, ältere Ergebnisse
+und ältere Foxi-Fassungen funktionieren unverändert –, wird aber, wenn es
+da ist, so eng geprüft wie der Rest: höchstens 20 Einträge, jeder Text
+begrenzt.
+
+**Die Erlaubnisliste bleibt eng.** Naheliegend wäre, Prospekt-Sammelseiten
+(etwa kaufDA oder Marktguru) als Quelle zuzulassen, weil sie Preise oft
+lesbarer zeigen. Das bleibt bewusst aus: Eine Quelle ist das, was der Mensch
+antippt, um den Preis nachzuprüfen – und das soll die Seite des Händlers
+sein, nicht die eines Dritten, der mit dem Klick eigene Interessen hat. Der
+Auftrag lässt deshalb weiterhin nur Händlerseiten zu.
+
 Und der Grundsatz aus Kapitel 3 gilt auch hier: Das mitgelieferte
 **Demo-Profil trägt erfundene Kaufgewohnheiten**. Der echte Wohnort gehört
 nicht in ein öffentliches Repository.
@@ -824,9 +893,9 @@ Tastatur öffnet.
 ## 11. Prüfen
 
 ```bash
-npm test                    # 214 Unit-Tests: Sortierung, Suche, Gruppierung,
+npm test                    # 231 Unit-Tests: Sortierung, Suche, Gruppierung,
                             # Exporte, Import, Datenintegrität
-node tools/durchlauf.mjs    # 99 Prüfungen im echten Browser (Chromium,
+node tools/durchlauf.mjs    # 103 Prüfungen im echten Browser (Chromium,
                             # iPhone-13-Profil) + die Bilder in docs/bilder/
 ```
 

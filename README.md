@@ -4,7 +4,7 @@
 ![Kein Konto](https://img.shields.io/badge/Kein%20Konto-kein%20Login%2C%20kein%20Backend-0f766e)
 ![PWA](https://img.shields.io/badge/PWA-offlinef%C3%A4hig-purple)
 ![MIT License](https://img.shields.io/badge/License-MIT-yellow)
-![Version](https://img.shields.io/badge/Version-0.13.0-orange)
+![Version](https://img.shields.io/badge/Version-0.14.0-orange)
 
 **Tippen statt Tippen.**
 
@@ -113,7 +113,7 @@ Foxi recherchiert dabei nicht selbst. Es bleibt die lokale Seite der Brücke:
 Bedarf hinaus, geprüfte Treffer herein – beides nur nach einer bewussten
 Handlung. Treffer stehen anschließend direkt an passenden Artikeln der
 Einkaufsliste. Gleiche Angebote mehrerer Filialen werden zusammengefasst;
-Preis, Händler, Filialzahl und Ablaufdatum bleiben direkt sichtbar.
+Preis, Händler mit Filiale und Ablaufdatum bleiben direkt sichtbar.
 Bestpreis-Hinweise gibt es nur für tatsächlich vergleichbare Grundpreise.
 Der vollständige Ablauf steht unter
 [docs/angebotsradar-pilot.md](docs/angebotsradar-pilot.md).
@@ -259,15 +259,15 @@ der Adresse erreichbar. Das ist kein Leck – dieselben Dateien liegen ohnehin
 ### Prüfen
 
 ```bash
-npm install && npm test          # 214 Unit-Tests (Logik, Daten, Import, PWA und Designsystem)
+npm install && npm test          # 231 Unit-Tests (Logik, Daten, Import, PWA und Designsystem)
 
 npm i --no-save playwright && npx playwright install chromium
-node tools/durchlauf.mjs         # 99 Prüfungen im echten Browser + Bilder
+node tools/durchlauf.mjs         # 103 Prüfungen im echten Browser + Bilder
 node tools/update-lauf.mjs       # 8 Prüfungen: Update mit zwei offenen Fenstern
 node tools/alltag-lauf.mjs       # 16 Prüfungen: neue Alltagsfunktionen, Gerätewechsel und Vollsicherung
 ```
 
-Die Prüfstrecke (99 Prüfungen) fährt die Abnahmekriterien ab, die man mit
+Die Prüfstrecke (103 Prüfungen) fährt die Abnahmekriterien ab, die man mit
 Unit-Tests nicht erreicht: die Zwei-Tipp-Regel, zehn simulierte Einkäufe, den
 verlustfreien Moduswechsel, Rezepte, das Ziehen der Kategorien mit Zeiger und
 mit Tastatur, den Briefing-Export aus der echten Zwischenablage und einen
@@ -388,6 +388,13 @@ in den normalen Listenexport aufgenommen.
 ---
 
 
+## Neu in 0.14.0
+
+- **Die Filiale steht immer dabei.** Auf der Einkaufsliste heißt ein Angebot jetzt „Angebot · 0,99 € · ALDI Nord Schürmannstraße 43b · bis …“ statt nur „ALDI Nord“. Gilt es in mehreren Filialen, steht die erste beim Namen und die übrigen gezählt; bei mehreren Angeboten die Filiale des günstigsten. Unter „Mehr“ stehen alle Filialen in der Zeile, die vollständigen Adressen aufklappbar.
+- **Angebote ohne bekannte Filiale bleiben draußen.** Beim Einlesen ordnet Foxi jedes Angebot einer Filiale aus „Meine Märkte“ zu – auch in anderer Schreibweise („Rellinghauser Str. 239, 45136 Essen“ trifft „Rellinghauser Straße 239, Essen“). Sammelangaben wie „alle Filialen“ oder fremde Filialen werden weggelassen, und die Meldung sagt, wie viele.
+- **Ein Auftrag, der weiß, wo die Preise stehen.** Die acht Händlerseiten wurden mit einem echten Browser geprüft: Keine zeigt Angebotspreise im bloßen Seitentext, PENNY verlangt eine Marktwahl, vier Seiten wiesen die Messung ab. Der Rechercheauftrag sagt dem Assistenten deshalb, dass er die Seiten darstellen und den Prospekt öffnen muss, bei welchen Händlern aus dem Profil die Preise je Filiale gelten und dass er die Gültigkeit von der Seite nimmt.
+- **Nicht gelesen statt geraten.** Kommt der Assistent an eine Filiale nicht heran, trägt er sie in `nichtGelesen` ein. Foxi zeigt diese Filialen mit Grund an – damit „kein Angebot“ nicht mit „nicht nachgesehen“ verwechselt wird. Das Feld ist freiwillig; ältere Ergebnisse bleiben gültig.
+
 ## Neu in 0.13.0
 
 - **Diese Woche wieder?** Bis zu fünf begründete Vorschläge aus mindestens drei verschiedenen Kauftagen. Ein stabiler Rhythmus zählt; sehr alte oder unregelmäßige Käufe erzeugen keine Empfehlung. „Noch genug“ verschiebt einen Vorschlag lokal um zwei bis sieben Tage.
@@ -399,7 +406,7 @@ in den normalen Listenexport aufgenommen.
 
 ## Stand und was als Nächstes kommt
 
-**Gebaut (v0.13.0):** Version 1 ist inhaltlich vollständig – Basismodus,
+**Gebaut (v0.14.0):** Version 1 ist inhaltlich vollständig – Basismodus,
 lernender Katalog, Rezepte, Kategorie-Reihenfolge per Ziehen, Teilen als
 Datei mit Zusammenführung beim Import, Briefing-Export, Statistik,
 Offlinebetrieb, Installierbarkeit. Der geführte Angebotscheck verbindet Foxis

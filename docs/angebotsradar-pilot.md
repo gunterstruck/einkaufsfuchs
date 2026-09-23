@@ -82,6 +82,18 @@ widersprüchliche Gültigkeitsdaten werden nicht übernommen. Importiertes HTML
 wird nie ausgeführt. Identische Angebote desselben Händlers in mehreren
 Filialen fasst Foxi zusammen; die einzelnen Märkte bleiben aufklappbar.
 
+**Jedes Angebot braucht eine Filiale aus „Meine Märkte“.** Vor der Prüfung
+ordnet Foxi Händler und Markt einer gespeicherten Filiale zu – auch in
+anderer Schreibweise, etwa „Rellinghauser Str. 239, 45136 Essen“ für
+„Rellinghauser Straße 239, Essen“. Angebote ohne passende Filiale, zum
+Beispiel „alle Filialen“ oder „bundesweit“, lässt Foxi weg; die Meldung nach
+dem Einlesen nennt ihre Zahl. Ein Demo-Ergebnis wird am Demo-Profil gemessen.
+
+Optional darf das Ergebnis eine Liste `nichtGelesen` tragen: höchstens 20
+Einträge mit `haendler`, `markt` und einem kurzen `grund`. Foxi zeigt sie
+unter dem Status an, damit „kein Angebot“ nicht mit „nicht nachgesehen“
+verwechselt wird.
+
 ## Was die Preismarkierung bedeutet
 
 Foxi behauptet nicht, den gesamten Markt zu kennen. Sind für denselben

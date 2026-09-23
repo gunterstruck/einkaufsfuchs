@@ -9,7 +9,7 @@
 import { t } from '../texte.js';
 import { VERSION } from '../version.js';
 import { kaufStatistik, datumDeutsch } from '../logik.js';
-import { HAENDLER, sichereAngebotsseite, angebotStatus, gruppiereAngebote, preisDeutsch } from '../angebotsradar.js';
+import { HAENDLER, sichereAngebotsseite, angebotStatus, gruppiereAngebote, preisDeutsch, filialName, kurzeFiliale } from '../angebotsradar.js';
 import {
     zustand, alleArtikel, offeneEintraege, listeLeeren, allesZuruecksetzen,
     rezeptAnlegen, rezeptLoeschen, rezeptAufListe,
@@ -415,6 +415,7 @@ function angebotsradarKarte() {
             'angebote-status angebote-status-leer'
         ));
     }
+    if (status.nichtGelesen.length) abschnitt.append(nichtGelesenBereich(status.nichtGelesen));
 
     abschnitt.append(knopfleiste(
         knopf(t('angebote.erneutPruefen'), rechercheAuftragKopieren, { betont: true }),
@@ -439,6 +440,23 @@ function angebotsradarKarte() {
     einzelheiten.append(zusammenfassung, liste);
     abschnitt.append(einzelheiten);
     return abschnitt;
+}
+
+/** Welche Filialen der Assistent nicht lesen konnte – mit Grund. Zugeklappt,
+ *  damit die Karte im Alltag kurz bleibt; die Überschrift sagt die Zahl. */
+function nichtGelesenBereich(eintraege) {
+    const details = document.createElement('details');
+    details.className = 'angebote-nichtgelesen';
+    const summary = document.createElement('summary');
+    summary.textContent = t('angebote.nichtGelesen', eintraege.length);
+    const liste = document.createElement('ul');
+    for (const eintrag of eintraege) {
+        const zeile = document.createElement('li');
+        zeile.textContent = `${filialName(eintrag.haendler, eintrag.markt || '')}: ${eintrag.grund}`;
+        liste.append(zeile);
+    }
+    details.append(summary, liste);
+    return details;
 }
 
 function maerkteBereich() {
@@ -530,8 +548,10 @@ function angebotszeile(angebot) {
 
     const markt = document.createElement('span');
     markt.className = 'angebot-markt';
+    /* Die Filialen stehen beim Namen in der Zeile, nicht erst hinter einem
+       Aufklapper. Die vollständigen Adressen folgen darunter. */
     markt.textContent = angebot.maerkte.length > 1
-        ? `${angebot.haendler} · ${t('angebote.filialen', angebot.maerkte.length)}`
+        ? `${angebot.haendler} · ${angebot.maerkte.map(kurzeFiliale).join(', ')}`
         : `${angebot.haendler} · ${angebot.maerkte[0]}`;
 
     const details = document.createElement('span');

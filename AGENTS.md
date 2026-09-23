@@ -56,8 +56,8 @@ QR-Code mehr.
 
 ```bash
 npm run dev                 # http://localhost:8080 – ohne npm install
-npm install && npm test     # 214 Unit-Tests
-node tools/durchlauf.mjs    # 99 Prüfungen im echten Browser + Bilder
+npm install && npm test     # 231 Unit-Tests
+node tools/durchlauf.mjs    # 103 Prüfungen im echten Browser + Bilder
 node tools/alltag-lauf.mjs  # 16 neue Alltagsprüfungen
 node tools/update-lauf.mjs  # 8 Updateprüfungen
 ```
