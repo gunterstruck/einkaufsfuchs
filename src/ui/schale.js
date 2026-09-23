@@ -213,6 +213,12 @@ function rahmenUeberwachen() {
     document.addEventListener('focusout', spaeter);
     window.addEventListener('orientationchange', spaeter);
     window.addEventListener('pageshow', spaeter);
+    /* Aus dem Hintergrund zurück: Eine installierte App wird dabei nicht neu
+       geladen, sondern steht so da, wie man sie verlassen hat – samt einer
+       Verschiebung, falls es eine gab. */
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') spaeter();
+    });
     /* Die Tastatur meldet sich als Größenänderung des sichtbaren
        Ausschnitts – beim Auf- *und* beim Zugehen. */
     window.visualViewport?.addEventListener('resize', spaeter);
