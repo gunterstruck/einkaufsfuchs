@@ -11,6 +11,7 @@ import {
     aktiveAngebote,
     alsAngebotsauftrag,
     demoAngebotsprofil,
+    filialenZuordnen,
     persoenlichesAngebotsprofil,
     gruppiereAngebote,
     pruefeAngebotsergebnis
@@ -64,14 +65,22 @@ export async function rechercheAuftragKopieren() {
     return true;
 }
 
-async function ergebnisUebernehmen(daten) {
+async function ergebnisUebernehmen(eingelesen) {
+    /* Erst die Filialen zuordnen, dann prüfen: Die Quellenprüfung eines
+       sonstigen Ladens sucht dessen hinterlegte Seite über die Filiale –
+       in der Schreibweise, die in „Meine Märkte" steht. */
+    const { daten, ausgelassen } = filialenZuordnen(eingelesen, maerkte());
     if (!pruefeAngebotsergebnis(daten, maerkte()).gueltig) {
         melde(t('angebote.ergebnisUngueltig'));
         return false;
     }
     await angebotsergebnisSetzen(daten);
     await angebotseinfuehrungAbschliessen();
-    melde(t('angebote.ergebnisUebernommen', gruppiereAngebote(aktiveAngebote(daten, new Date(), maerkte())).length));
+    melde(t(
+        'angebote.ergebnisUebernommen',
+        gruppiereAngebote(aktiveAngebote(daten, new Date(), maerkte())).length,
+        ausgelassen
+    ));
     return true;
 }
 

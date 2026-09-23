@@ -11,7 +11,7 @@ import { assistentZeichnen } from './assistent.js';
 import { listenKategorien } from '../zustand.js';
 import { t } from '../texte.js';
 import { gruppiereListe, datumDeutsch } from '../logik.js';
-import { angeboteFuerArtikel, preisDeutsch } from '../angebotsradar.js';
+import { angeboteFuerArtikel, filialenKurz, preisDeutsch } from '../angebotsradar.js';
 import {
     zustand, offeneEintraege, erledigteEintraege, abhaken, zurueckholen,
     erledigteAufraeumen, istExperte, angebotsergebnis, produktfoto
@@ -24,26 +24,29 @@ let behaelter = null;
 
 /** Kompakter Angebotstext für die Listenkarte. Die Kaufbedingung gehört
  * zum ausgewählten günstigsten Treffer: Ohne sie würde ein „ab“-Preis etwa
- * trotz Mindestmenge wie ein frei verfügbarer Preis wirken. */
+ * trotz Mindestmenge wie ein frei verfügbarer Preis wirken. Aus demselben
+ * Grund steht immer seine Filiale dabei: Ein Preis ohne Laden schickt einen
+ * in den falschen Markt. */
 export function angebotHinweisFuerListe(angebote) {
     if (!Array.isArray(angebote) || angebote.length === 0) return '';
     const guenstigster = angebote.reduce(
         (bisher, angebot) => angebot.preis < bisher.preis ? angebot : bisher
     );
+    const filiale = filialenKurz(guenstigster.haendler, guenstigster.maerkte);
     const grundtext = angebote.length === 1
         ? t(
             guenstigster.treffer === 'alternative'
                 ? 'angebote.listenAlternative'
                 : 'angebote.listenTreffer',
             preisDeutsch(guenstigster.preis),
-            guenstigster.haendler,
-            datumDeutsch(new Date(`${guenstigster.gueltigBis}T12:00:00`)),
-            guenstigster.maerkte.length
+            filiale,
+            datumDeutsch(new Date(`${guenstigster.gueltigBis}T12:00:00`))
         )
         : t(
             'angebote.listenMehrere',
             angebote.length,
             preisDeutsch(guenstigster.preis),
+            filiale,
             datumDeutsch(new Date(`${angebote.map((a) => a.gueltigBis).sort()[0]}T12:00:00`))
         );
     const kaufbedingung = typeof guenstigster.hinweis === 'string'

@@ -6,6 +6,10 @@ import {
     angebotStatus,
     alsAngebotsauftrag,
     demoAngebotsprofil,
+    filialenKurz,
+    filialenZuordnen,
+    filialName,
+    kurzeFiliale,
     persoenlichesAngebotsprofil,
     gruppiereAngebote,
     preisDeutsch,
@@ -314,5 +318,143 @@ describe('Angebotsergebnis', () => {
         expect(status.angebote).toBe(2);
         expect(status.artikel).toBe(2);
         expect(status.gueltigBis.toISOString()).toContain('2026-09-05');
+    });
+});
+
+describe('Filiale', () => {
+    const meineMaerkte = [
+        { id: 'r', haendler: 'REWE', markt: 'Rellinghauser Straße 239, Essen', angebotsseite: '', aktiv: true },
+        { id: 'a1', haendler: 'ALDI Nord', markt: 'Schürmannstraße 43b, Essen', angebotsseite: '', aktiv: true },
+        { id: 'a2', haendler: 'ALDI Nord', markt: 'Steeler Straße 187, Essen', angebotsseite: '', aktiv: true },
+        { id: 'b', haendler: 'Sonstiger Laden', markt: 'Bioladen Grün, Hauptstraße 5, Essen',
+            angebotsseite: 'https://bio.example/angebote', aktiv: true }
+    ];
+    const persoenlich = (angebote) => ({ ...ergebnis(angebote), profilId: 'foxi-persoenlich', demo: false });
+
+    it('nennt eine Filiale so, wie man sie im Alltag nennt', () => {
+        expect(kurzeFiliale('Schürmannstraße 43b, 45136 Essen')).toBe('Schürmannstraße 43b');
+        expect(filialName('REWE', 'Rellinghauser Straße 239, Essen')).toBe('REWE Rellinghauser Straße 239');
+        /* Beim sonstigen Laden ist der Name Teil von `markt`. */
+        expect(filialName('Sonstiger Laden', 'Bioladen Grün, Hauptstraße 5, Essen'))
+            .toBe('Bioladen Grün, Hauptstraße 5');
+        expect(filialenKurz('ALDI Nord', ['Schürmannstraße 43b, Essen', 'Steeler Straße 187, Essen']))
+            .toBe('ALDI Nord Schürmannstraße 43b + 1 weitere Filiale');
+    });
+
+    it('ordnet andere Schreibweisen der gespeicherten Filiale zu', () => {
+        const { daten, ausgelassen } = filialenZuordnen(persoenlich([
+            angebot({ haendler: 'REWE', markt: 'Rellinghauser Str. 239, 45136 Essen',
+                quelle: 'https://www.rewe.de/angebote/' }),
+            angebot({ haendler: 'aldi nord', markt: 'SCHÜRMANNSTRASSE 43B, Essen' })
+        ]), meineMaerkte);
+        expect(ausgelassen).toBe(0);
+        expect(daten.angebote.map((eintrag) => `${eintrag.haendler}|${eintrag.markt}`)).toEqual([
+            'REWE|Rellinghauser Straße 239, Essen',
+            'ALDI Nord|Schürmannstraße 43b, Essen'
+        ]);
+        expect(pruefeAngebotsergebnis(daten, meineMaerkte).gueltig).toBe(true);
+    });
+
+    it('lässt Angebote ohne Filiale aus dem Profil weg und zählt sie', () => {
+        const { daten, ausgelassen } = filialenZuordnen(persoenlich([
+            angebot({ markt: 'alle Filialen' }),
+            angebot({ markt: 'bundesweit' }),
+            angebot({ haendler: 'PENNY', markt: 'Rellinghauser Straße 239, Essen',
+                quelle: 'https://www.penny.de/angebote/' }),
+            angebot({ markt: 'Steeler Straße 187, Essen' })
+        ]), meineMaerkte);
+        expect(ausgelassen).toBe(3);
+        expect(daten.angebote).toHaveLength(1);
+        expect(daten.angebote[0].markt).toBe('Steeler Straße 187, Essen');
+    });
+
+    it('rät nicht zwischen zwei Filialen derselben Straße', () => {
+        const zwei = [
+            { id: 'x', haendler: 'REWE', markt: 'Hauptstraße 1, Essen', angebotsseite: '', aktiv: true },
+            { id: 'y', haendler: 'REWE', markt: 'Hauptstraße 1, Bochum', angebotsseite: '', aktiv: true }
+        ];
+        const { ausgelassen } = filialenZuordnen(persoenlich([
+            angebot({ haendler: 'REWE', markt: 'Hauptstraße 1, 45000 Irgendwo', quelle: 'https://www.rewe.de/angebote/' })
+        ]), zwei);
+        expect(ausgelassen).toBe(1);
+    });
+
+    it('findet beim sonstigen Laden über die Zuordnung auch dessen hinterlegte Quelle', () => {
+        const roh = persoenlich([angebot({
+            haendler: 'Sonstiger Laden',
+            markt: 'Bioladen Grün, Hauptstraße 5, 45127 Essen',
+            quelle: 'https://bio.example/angebote/milch'
+        })]);
+        expect(pruefeAngebotsergebnis(roh, meineMaerkte).gueltig).toBe(false);
+        const { daten } = filialenZuordnen(roh, meineMaerkte);
+        expect(pruefeAngebotsergebnis(daten, meineMaerkte).gueltig).toBe(true);
+    });
+
+    it('misst ein Demo-Ergebnis am Demo-Profil, nicht an den gespeicherten Märkten', () => {
+        const { ausgelassen } = filialenZuordnen(ergebnis([angebot()]), []);
+        expect(ausgelassen).toBe(0);
+    });
+
+    it('lässt formal kaputte Angebote für die Prüfung stehen', () => {
+        const { daten, ausgelassen } = filialenZuordnen(persoenlich([{ artikelId: 'milch' }]), meineMaerkte);
+        expect(ausgelassen).toBe(0);
+        expect(pruefeAngebotsergebnis(daten, meineMaerkte).gueltig).toBe(false);
+        expect(filialenZuordnen(null, meineMaerkte)).toEqual({ daten: null, ausgelassen: 0 });
+    });
+});
+
+describe('Nicht gelesene Filialen', () => {
+    it('nimmt eine kurze Liste an und meldet sie im Status', () => {
+        const daten = {
+            ...ergebnis([angebot()]),
+            nichtGelesen: [{ haendler: 'REWE', markt: 'Rellinghauser Straße 239, 45136 Essen', grund: 'Seite abgewiesen (403)' }]
+        };
+        expect(pruefeAngebotsergebnis(daten).gueltig).toBe(true);
+        expect(angebotStatus(daten, new Date('2026-09-01T12:00:00Z')).nichtGelesen).toHaveLength(1);
+    });
+
+    it('bleibt freiwillig', () => {
+        expect(angebotStatus(ergebnis([angebot()]), new Date('2026-09-01T12:00:00Z')).nichtGelesen).toEqual([]);
+    });
+
+    it('prüft die Einträge so eng wie den Rest', () => {
+        const mit = (nichtGelesen) => pruefeAngebotsergebnis({ ...ergebnis([angebot()]), nichtGelesen });
+        expect(mit('REWE').gueltig).toBe(false);
+        expect(mit([{ haendler: 'REWE' }]).gueltig).toBe(false);
+        expect(mit([{ haendler: 'REWE', grund: 'x'.repeat(201) }]).gueltig).toBe(false);
+        expect(mit(Array.from({ length: 21 }, () => ({ haendler: 'REWE', grund: '403' }))).gueltig).toBe(false);
+    });
+});
+
+describe('Auftrag mit Preiswegen', () => {
+    const auftrag = alsAngebotsauftrag(demoAngebotsprofil(new Date('2026-08-31T07:00:00Z')));
+
+    it('verlangt die Filiale wortgleich und verbietet Sammelangaben', () => {
+        expect(auftrag).toContain('Jedes Angebot nennt genau eine Filiale');
+        expect(auftrag).toContain('„alle Filialen“');
+    });
+
+    it('erklärt, wo die Preise stehen, und nennt nur die Händler aus dem Profil', () => {
+        expect(auftrag).toContain('wie ein Browser darstellt');
+        expect(auftrag).toContain('Preise je Filiale gelten bei REWE.');
+        expect(auftrag).toContain('ALDI Nord, ALDI Süd: Die Wochenangebote gelten');
+        expect(auftrag).not.toContain('Preise je Filiale gelten bei REWE, EDEKA');
+    });
+
+    it('lässt nicht lesbare Filialen melden statt raten', () => {
+        expect(auftrag).toContain('rate nicht');
+        expect(auftrag).toContain('"nichtGelesen": []');
+    });
+
+    it('zeigt im Beispiel die erste Filiale des Profils', () => {
+        const eigener = alsAngebotsauftrag(persoenlichesAngebotsprofil({
+            maerkte: [{ id: 'm', haendler: 'PENNY', markt: 'Beispielweg 1, Essen', angebotsseite: '' }]
+        }));
+        const beispiel = JSON.parse(eigener.split('Ausgabeformat:\n')[1].split('\n\nEingabeprofil:')[0]);
+        expect(beispiel.angebote[0].haendler).toBe('PENNY');
+        expect(beispiel.angebote[0].markt).toBe('Beispielweg 1, Essen');
+        expect(beispiel.angebote[0].quelle).toBe('https://www.penny.de/angebote/');
+        expect(pruefeAngebotsergebnis({ ...beispiel, erzeugt: '2026-09-01T08:00:00Z',
+            angebote: [{ ...beispiel.angebote[0], gueltigVon: '2026-09-01', gueltigBis: '2026-09-06' }] }).gueltig).toBe(true);
     });
 });

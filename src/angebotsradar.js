@@ -14,16 +14,156 @@ export const ANGEBOTSPROFIL_VERSION = 1;
 export const ANGEBOTSERGEBNIS_TYP = 'foxi-angebote';
 export const ANGEBOTSERGEBNIS_VERSION = 2;
 
+/**
+ * Die acht Händler – und was man über ihre Angebotsseiten **gemessen** weiß.
+ *
+ * Erhoben im September 2026 mit einem echten Browser (nicht nur einem
+ * Seitenabruf), je Seite vier Sekunden Nachladezeit:
+ *
+ * - ALDI Nord, Lidl, Kaufland: Seite lädt, aber **kein Angebotspreis im
+ *   Seitentext** (bei Lidl ein einzelner Versandpreis). Die Preise stehen im
+ *   Prospekt-Betrachter oder hinter einer Filialwahl.
+ * - PENNY: Seite lädt und **verlangt ausdrücklich eine Marktwahl**.
+ * - ALDI Süd, REWE, EDEKA, Netto: **abgewiesen (HTTP 403)**, auch mit echtem
+ *   Browser. Das kann an der Rechenzentrums-Adresse der Messung liegen; ein
+ *   Assistent mit anderem Netzzugang kommt womöglich weiter.
+ *
+ * Die Folgerung steht im Auftrag: Keine der acht Seiten gibt Preise beim
+ * bloßen Aufruf her. Ein Assistent braucht ein Werkzeug, das Seiten
+ * darstellt und den Prospekt öffnet – und bei marktgebundenen Händlern die
+ * Seite der konkreten Filiale.
+ *
+ * `marktgebunden`: Preise gelten nur für eine gewählte Filiale. Gemessen bei
+ * PENNY; bei Kaufland und Netto steht es schon in der Adresse
+ * („filiale.", „filialangebote"); bei REWE und EDEKA ist das Angebot
+ * regional je Markt – beide haben die Messung abgewiesen, die Einordnung
+ * stammt dort aus dem Aufbau ihrer Seiten, nicht aus einem Blick hinein.
+ */
 export const HAENDLER = Object.freeze([
-    { name: 'ALDI Nord', url: 'https://www.aldi-nord.de/angebote.html', host: 'aldi-nord.de' },
-    { name: 'ALDI Süd', url: 'https://www.aldi-sued.de/angebote', host: 'aldi-sued.de' },
-    { name: 'Lidl', url: 'https://www.lidl.de/c/online-prospekte/s10005610/', host: 'lidl.de' },
-    { name: 'REWE', url: 'https://www.rewe.de/angebote/', host: 'rewe.de' },
-    { name: 'EDEKA', url: 'https://www.edeka.de/angebote/', host: 'edeka.de' },
-    { name: 'Kaufland', url: 'https://filiale.kaufland.de/angebote/uebersicht.html', host: 'kaufland.de' },
-    { name: 'Netto Marken-Discount', url: 'https://www.netto-online.de/filialangebote', host: 'netto-online.de' },
-    { name: 'PENNY', url: 'https://www.penny.de/angebote/', host: 'penny.de' }
+    { name: 'ALDI Nord', url: 'https://www.aldi-nord.de/angebote.html', host: 'aldi-nord.de', marktgebunden: false },
+    { name: 'ALDI Süd', url: 'https://www.aldi-sued.de/angebote', host: 'aldi-sued.de', marktgebunden: false },
+    { name: 'Lidl', url: 'https://www.lidl.de/c/online-prospekte/s10005610/', host: 'lidl.de', marktgebunden: false },
+    { name: 'REWE', url: 'https://www.rewe.de/angebote/', host: 'rewe.de', marktgebunden: true },
+    { name: 'EDEKA', url: 'https://www.edeka.de/angebote/', host: 'edeka.de', marktgebunden: true },
+    { name: 'Kaufland', url: 'https://filiale.kaufland.de/angebote/uebersicht.html', host: 'kaufland.de', marktgebunden: true },
+    { name: 'Netto Marken-Discount', url: 'https://www.netto-online.de/filialangebote', host: 'netto-online.de', marktgebunden: true },
+    { name: 'PENNY', url: 'https://www.penny.de/angebote/', host: 'penny.de', marktgebunden: true }
 ]);
+
+function istBekannterHaendler(haendler) {
+    return HAENDLER.some((eintrag) => eintrag.name === haendler);
+}
+
+function gekuerzt(text, max) {
+    return text.length > max ? `${text.slice(0, max - 1)}…` : text;
+}
+
+/** Die Kurzform einer Filiale für enge Stellen: der Teil vor dem ersten
+ *  Komma, also meist Straße und Hausnummer. „Schürmannstraße 43b, 45136
+ *  Essen" wird zu „Schürmannstraße 43b". Wer in einem Viertel einkauft,
+ *  erkennt seinen Laden an der Straße, nicht an der Postleitzahl. */
+export function kurzeFiliale(markt) {
+    const text = String(markt || '').trim();
+    const vorKomma = text.split(',')[0].trim();
+    return gekuerzt(vorKomma || text, 40);
+}
+
+/** Wie man eine Filiale im Alltag nennt: „REWE Rellinghauser Straße 239".
+ *
+ *  Beim sonstigen Laden steht der Händler nur als Sammelbegriff im Feld
+ *  `haendler`; sein Name ist der erste Teil von `markt`. Dort zählen
+ *  deshalb Name **und** Straße – „Sonstiger Laden Bioladen Grün" hülfe
+ *  niemandem. */
+export function filialName(haendler, markt) {
+    if (!istBekannterHaendler(haendler)) {
+        const teile = String(markt || '').split(',').map((teil) => teil.trim()).filter(Boolean);
+        return gekuerzt(teile.slice(0, 2).join(', ') || String(haendler || ''), 60);
+    }
+    return `${haendler} ${kurzeFiliale(markt)}`.trim();
+}
+
+/** Filialangabe für eine zusammengefasste Angebotsgruppe: die erste Filiale
+ *  beim Namen, die übrigen gezählt. Die vollständigen Adressen stehen im
+ *  Artikelblatt und unter „Mehr". */
+export function filialenKurz(haendler, maerkte) {
+    const liste = Array.isArray(maerkte) ? maerkte : [];
+    if (liste.length === 0) return String(haendler || '');
+    const erste = filialName(haendler, liste[0]);
+    const weitere = liste.length - 1;
+    if (weitere === 0) return erste;
+    return `${erste} + ${weitere} ${weitere === 1 ? 'weitere Filiale' : 'weitere Filialen'}`;
+}
+
+/** Schlüssel, unter dem zwei Schreibweisen derselben Filiale gleich sind:
+ *  Groß- und Kleinschreibung, ß/ss, Umlaute, „Str." und Satzzeichen zählen
+ *  nicht. „Rellinghauser Str. 239" trifft so „Rellinghauser Straße 239". */
+function filialSchluessel(text) {
+    return String(text || '')
+        .toLocaleLowerCase('de')
+        .replaceAll('ß', 'ss')
+        .replaceAll('ä', 'ae')
+        .replaceAll('ö', 'oe')
+        .replaceAll('ü', 'ue')
+        .replace(/str\.(?=[\s\d,]|$)/g, 'strasse')
+        .replace(/[^a-z0-9]/g, '');
+}
+
+function findeFiliale(angebot, maerkte) {
+    const haendler = filialSchluessel(angebot.haendler);
+    const kandidaten = maerkte.filter((markt) => filialSchluessel(markt.haendler) === haendler);
+    const genau = kandidaten.find((markt) => filialSchluessel(markt.markt) === filialSchluessel(angebot.markt));
+    if (genau) return genau;
+    /* Zweiter Versuch nur über Straße und Hausnummer – aber nur, wenn das
+       genau eine gespeicherte Filiale trifft. Ein Assistent schreibt gern
+       „…, 45136 Essen", wo „…, Essen" gespeichert ist. Raten zwischen zwei
+       Filialen derselben Straße wäre schlimmer als weglassen. */
+    const kurz = filialSchluessel(kurzeFiliale(angebot.markt));
+    const ueberStrasse = kandidaten.filter((markt) => filialSchluessel(kurzeFiliale(markt.markt)) === kurz);
+    return ueberStrasse.length === 1 ? ueberStrasse[0] : null;
+}
+
+/**
+ * Jedes Angebot einer Filiale aus dem Profil zuordnen – vor der Prüfung.
+ *
+ * Ein Angebot ohne Filiale ist für den Einkauf wertlos: „ALDI Nord,
+ * bundesweit" sagt nicht, in welchen Laden man gehen soll, und bei REWE,
+ * EDEKA, Kaufland, Netto und PENNY gilt der Preis ohnehin nur im gewählten
+ * Markt. Deshalb:
+ *
+ * - Trifft `haendler` + `markt` eine Filiale aus dem Profil (auch in anderer
+ *   Schreibweise), übernimmt Foxi **deren** Schreibweise. So fasst die
+ *   Gruppierung gleiche Angebote zusammen, und die Quellenprüfung eines
+ *   sonstigen Ladens findet ihre hinterlegte Seite wieder.
+ * - Trifft es keine, wird das Angebot **weggelassen und gezählt** – nicht
+ *   still verschluckt, nicht das ganze Ergebnis verworfen.
+ *
+ * Welches Profil? Ein Demo-Ergebnis gehört zum Demo-Profil, jedes andere
+ * zu den gespeicherten Märkten. Formal kaputte Angebote bleiben stehen,
+ * damit `pruefeAngebotsergebnis()` sie wie bisher als kaputt erkennt.
+ */
+export function filialenZuordnen(daten, maerkte = []) {
+    if (!daten || typeof daten !== 'object' || !Array.isArray(daten.angebote)) {
+        return { daten, ausgelassen: 0 };
+    }
+    const profilMaerkte = daten.demo === true ? DEMO_MAERKTE : (Array.isArray(maerkte) ? maerkte : []);
+    let ausgelassen = 0;
+    const angebote = [];
+    for (const angebot of daten.angebote) {
+        if (!angebot || typeof angebot !== 'object' ||
+            typeof angebot.haendler !== 'string' || typeof angebot.markt !== 'string') {
+            angebote.push(angebot);
+            continue;
+        }
+        const filiale = findeFiliale(angebot, profilMaerkte);
+        if (!filiale) {
+            ausgelassen += 1;
+            continue;
+        }
+        angebote.push({ ...angebot, haendler: filiale.haendler, markt: filiale.markt });
+    }
+    return { daten: { ...daten, angebote }, ausgelassen };
+}
+
 const OFFIZIELLE_HOSTS = HAENDLER.map(h => h.host);
 export function sichereAngebotsseite(wert) {
     try {
@@ -132,6 +272,16 @@ export function persoenlichesAngebotsprofil({ region = '', maerkte = [], artikel
  * derselbe Text manuell oder als wiederkehrende Cowork-Aufgabe laufen.
  */
 export function alsAngebotsauftrag(profil = demoAngebotsprofil()) {
+    const profilMaerkte = Array.isArray(profil.maerkte) ? profil.maerkte : [];
+    /* Das Beispiel zeigt die erste Filiale des Profils, wie sie dort steht.
+       Wortgleich übernehmen lernt ein Assistent am Beispiel schneller als an
+       einer Regel. */
+    const ersterMarkt = profilMaerkte[0];
+    const beispielHaendler = ersterMarkt?.haendler || 'ALDI Nord';
+    const beispielMarkt = ersterMarkt?.markt || 'Filiale wortgleich aus dem Eingabeprofil';
+    const beispielQuelle = sichereAngebotsseite(ersterMarkt?.angebotsseite || '') ||
+        HAENDLER.find((eintrag) => eintrag.name === beispielHaendler)?.url ||
+        'https://www.aldi-nord.de/angebote.html';
     const beispiel = {
         typ: ANGEBOTSERGEBNIS_TYP,
         version: ANGEBOTSERGEBNIS_VERSION,
@@ -142,8 +292,8 @@ export function alsAngebotsauftrag(profil = demoAngebotsprofil()) {
             {
                 artikelId: 'milch',
                 artikelName: 'Milch',
-                haendler: 'ALDI Nord',
-                markt: 'Schürmannstraße 43b, 45136 Essen',
+                haendler: beispielHaendler,
+                markt: beispielMarkt,
                 produkt: 'Vollständiger Produktname',
                 preis: 0.99,
                 waehrung: 'EUR',
@@ -153,28 +303,60 @@ export function alsAngebotsauftrag(profil = demoAngebotsprofil()) {
                 gueltigBis: 'JJJJ-MM-TT',
                 treffer: 'genau',
                 hinweis: '',
-                quelle: 'https://www.aldi-nord.de/angebote.html'
+                quelle: beispielQuelle
             }
-        ]
+        ],
+        nichtGelesen: []
     };
+
+    /* Die Hinweise nennen nur Händler, die im Profil auch vorkommen. Ein
+       Auftrag über zwei Märkte braucht keine Anleitung für acht. */
+    const imProfil = new Set(profilMaerkte.map((markt) => markt.haendler));
+    const gebunden = HAENDLER.filter((eintrag) => eintrag.marktgebunden && imProfil.has(eintrag.name));
+    const einheitlich = HAENDLER.filter((eintrag) => !eintrag.marktgebunden && imProfil.has(eintrag.name));
+    const mitSonstigem = profilMaerkte.some((markt) => !istBekannterHaendler(markt.haendler));
+    const namen = (liste) => liste.map((eintrag) => eintrag.name).join(', ');
+
+    const preiswege = [
+        'So kommst du an die Preise:',
+        '- Die Angebotsseiten zeigen die Preise nicht im Seitentext. Sie werden nachgeladen oder stehen im Online-Prospekt. Ein reiner Textabruf findet deshalb nichts: Öffne die Seiten mit einem Werkzeug, das sie wie ein Browser darstellt, und dort den Prospekt oder die Angebotsübersicht.'
+    ];
+    if (gebunden.length) {
+        preiswege.push(`- Preise je Filiale gelten bei ${namen(gebunden)}. Nimm die angebotsseite der Filiale aus dem Eingabeprofil. Verlangt die Seite eine Marktwahl, wähle über die öffentliche Marktsuche genau die Filiale aus dem Feld markt.`);
+    }
+    if (einheitlich.length) {
+        preiswege.push(`- ${namen(einheitlich)}: Die Wochenangebote gelten in der Regel für alle Filialen. Trage jedes Angebot trotzdem für jede Filiale dieses Händlers aus dem Eingabeprofil ein, sofern die Seite nichts Abweichendes sagt.`);
+    }
+    if (mitSonstigem) {
+        preiswege.push('- Sonstige Läden: nur die im Eingabeprofil hinterlegte angebotsseite.');
+    }
+    preiswege.push(
+        '- Die Gültigkeit (gueltigVon, gueltigBis) steht auf der Seite oder im Prospekt. Übernimm sie von dort, leite sie nicht aus dem Wochentag ab.',
+        '- Kommst du an eine Filiale nicht heran – Seite abgewiesen, Marktwahl nicht möglich, Prospekt nicht lesbar –, rate nicht. Trage sie in nichtGelesen ein und mach mit der nächsten weiter.'
+    );
 
     return [
         'WÖCHENTLICHER FOXI-ANGEBOTSRADAR',
         '',
         'Aufgabe:',
-        'Prüfe die aktuell gültigen und bereits veröffentlichten Wochenangebote der unten genannten Märkte.',
+        'Prüfe für jede Filiale im Eingabeprofil die aktuell gültigen und bereits veröffentlichten Wochenangebote.',
         'Suche ausschließlich nach Angeboten, die zu den Artikeln im Profil passen. Andere Angebote verwerfen.',
+        '',
+        ...preiswege,
         '',
         'Regeln:',
         `1. Verwende nur öffentlich erreichbare offizielle Händlerseiten: ${OFFIZIELLE_HOSTS.join(', ')}. Bei sonstigen Läden ausschließlich die im Eingabeprofil ausdrücklich hinterlegte Angebotsseite und deren Host. Ohne hinterlegte Seite keine Angebote für sonstige Läden erfinden.`,
-        '2. Keine Anmeldung, keine App-Coupons hinter Login und keine Umgehung technischer Sperren.',
-        '   Übernimm haendler und markt im Ergebnis wortgleich aus dem Eingabeprofil; bei Sonstiger Laden steht der konkrete Name im Feld markt.',
-        '3. Ordne nur plausible Treffer zu. Eine andere Marke ist erlaubt, muss aber als „alternative“ markiert werden.',
-        '4. Übernimm Preis, Packungsgröße, Grundpreis, Gültigkeit und konkrete Quelle. Nichts erfinden.',
+        '2. Keine Anmeldung, keine App-Coupons hinter Login und keine Umgehung technischer Sperren. Eine abgewiesene Seite gehört in nichtGelesen.',
+        '3. Jedes Angebot nennt genau eine Filiale: haendler und markt wortgleich aus dem Eingabeprofil; bei Sonstiger Laden steht der konkrete Name im Feld markt.',
+        '   Keine Sammelangaben wie „alle Filialen“ oder „bundesweit“. Gilt ein Angebot in mehreren Filialen des Profils, trage es für jede Filiale einzeln ein – Foxi fasst gleiche Angebote selbst zusammen.',
+        '   Angebote ohne Filiale aus dem Eingabeprofil lässt Foxi beim Einlesen weg.',
+        '4. Ordne nur plausible Treffer zu. Eine andere Marke ist erlaubt, muss aber als „alternative“ markiert werden.',
+        '5. Übernimm Preis, Packungsgröße, Grundpreis, Gültigkeit und als quelle die Seite, auf der der Preis steht. Nichts erfinden.',
         '   Schreibe den Grundpreis als positive Zahl mit eindeutigem Nenner, zum Beispiel „0,99 €/l“, „1,49 €/kg“ oder „0,25 €/Stück“.',
-        '5. Falls kein passendes Angebot existiert, gib eine leere Angebotsliste zurück.',
-        '6. Erzeuge nach Möglichkeit eine Datei namens „foxi-angebote-JJJJ-MM-TT.json“ mit dem Ergebnis.',
-        '7. Falls du keine Datei erzeugen kannst, antworte ausschließlich mit dem gültigen JSON – ohne Markdown, Einleitung oder Nachsatz.',
+        '6. Falls kein passendes Angebot existiert, gib eine leere Angebotsliste zurück.',
+        '   Nicht lesbare Filialen stehen in nichtGelesen, je Eintrag {"haendler": …, "markt": …, "grund": …}; grund kurz, zum Beispiel „Seite abgewiesen (403)“ oder „Marktwahl nicht möglich“.',
+        '7. Erzeuge nach Möglichkeit eine Datei namens „foxi-angebote-JJJJ-MM-TT.json“ mit dem Ergebnis.',
+        '8. Falls du keine Datei erzeugen kannst, antworte ausschließlich mit dem gültigen JSON – ohne Markdown, Einleitung oder Nachsatz.',
         '',
         'Ausgabeformat:',
         JSON.stringify(beispiel, null, 2),
@@ -234,6 +416,21 @@ function istAngebotGueltig(angebot, version, maerkte) {
     return istOffizielleQuelle(angebot.quelle, angebot, maerkte);
 }
 
+/** `nichtGelesen` ist freiwillig: Ältere Assistenten-Läufe und ältere
+ *  Foxi-Fassungen kennen das Feld nicht, und es ändert kein Angebot. Wenn
+ *  es da ist, wird es aber genauso eng geprüft wie der Rest – es ist
+ *  ebenfalls fremder Text, der in der App angezeigt wird. */
+function istNichtGelesenGueltig(liste) {
+    if (liste === undefined) return true;
+    if (!Array.isArray(liste) || liste.length > 20) return false;
+    return liste.every((eintrag) =>
+        eintrag && typeof eintrag === 'object' &&
+        istText(eintrag.haendler, 80) &&
+        (eintrag.markt === undefined || eintrag.markt === '' || istText(eintrag.markt, 200)) &&
+        istText(eintrag.grund, 200)
+    );
+}
+
 export function pruefeAngebotsergebnis(daten, maerkte = []) {
     if (!daten || typeof daten !== 'object') return { gueltig: false, grund: 'kaputt' };
     if (daten.typ !== ANGEBOTSERGEBNIS_TYP) return { gueltig: false, grund: 'fremd' };
@@ -252,6 +449,7 @@ export function pruefeAngebotsergebnis(daten, maerkte = []) {
     if (!daten.angebote.every((angebot) => istAngebotGueltig(angebot, version, maerkte))) {
         return { gueltig: false, grund: 'kaputt' };
     }
+    if (!istNichtGelesenGueltig(daten.nichtGelesen)) return { gueltig: false, grund: 'kaputt' };
     return { gueltig: true, grund: null };
 }
 
@@ -434,7 +632,7 @@ export function angeboteFuerArtikel(daten, artikelId, heute = new Date(), maerkt
 
 export function angebotStatus(daten, heute = new Date(), maerkte = []) {
     if (!pruefeAngebotsergebnis(daten, maerkte).gueltig) {
-        return { vorhanden: false, erzeugt: null, angebote: 0, artikel: 0, gueltigBis: null };
+        return { vorhanden: false, erzeugt: null, angebote: 0, artikel: 0, gueltigBis: null, nichtGelesen: [] };
     }
     const gruppen = gruppiereAngebote(aktiveAngebote(daten, heute, maerkte));
     return {
@@ -444,7 +642,8 @@ export function angebotStatus(daten, heute = new Date(), maerkte = []) {
         artikel: new Set(gruppen.map((angebot) => angebot.artikelId)).size,
         gueltigBis: gruppen.length
             ? new Date(`${gruppen.map((angebot) => angebot.gueltigBis).sort()[0]}T12:00:00`)
-            : null
+            : null,
+        nichtGelesen: Array.isArray(daten.nichtGelesen) ? daten.nichtGelesen : []
     };
 }
 

@@ -279,8 +279,15 @@ const DE = {
         uebernehmen: 'Angebote übernehmen',
         ergebnisUngueltig: 'Das ist kein gültiges Foxi-Angebotsergebnis.',
         ergebnisZuGross: 'Die Ergebnisdatei ist zu groß.',
-        ergebnisUebernommen: (n) =>
-            n === 1 ? '1 aktuelles Angebot übernommen' : `${n} aktuelle Angebote übernommen`,
+        ergebnisUebernommen: (n, ausgelassen = 0) =>
+            (n === 1 ? '1 aktuelles Angebot übernommen' : `${n} aktuelle Angebote übernommen`) +
+            (ausgelassen > 0
+                ? ` · ${ausgelassen} ohne Filiale aus „Meine Märkte“ ausgelassen`
+                : ''),
+        /* Was der Assistent nicht lesen konnte, gehört sichtbar dazu: Sonst
+           hält man „kein Angebot" für „kein Treffer". */
+        nichtGelesen: (n) =>
+            n === 1 ? '1 Filiale konnte der Assistent nicht lesen' : `${n} Filialen konnte der Assistent nicht lesen`,
         nochKeinErgebnis: 'Noch kein Ergebnis eingelesen.',
         keineAktuellen: 'Das letzte Ergebnis enthält keine heute gültigen Treffer.',
         statusAktuell: (angebote, artikel, datum, bis) =>
@@ -295,15 +302,16 @@ const DE = {
         marktFehlt: 'Bitte gib die Filiale oder Adresse an.',
         marktGespeichert: 'Markt lokal gespeichert.',
         angeboteAnzeigen: (n) => n === 1 ? '1 Angebot anzeigen' : `${n} Angebote anzeigen`,
-        filialen: (n) => n === 1 ? '1 ausgewählte Filiale' : `${n} ausgewählte Filialen`,
-        filialenAnzeigen: 'Filialen anzeigen',
+        filialenAnzeigen: 'Filialen mit Adresse anzeigen',
         trefferAlternative: 'Alternative',
         niedrigsterGrundpreis: 'Niedrigster gefundener Grundpreis',
         gueltigBis: (datum) => `bis ${datum}`,
         quelle: 'Quelle',
-        listenTreffer: (preis, haendler, bis, filialen) => `Angebot · ${preis} · ${haendler}${filialen > 1 ? ` · ${filialen} Filialen` : ''} · bis ${bis}`,
-        listenAlternative: (preis, haendler, bis, filialen) => `Alternative · ${preis} · ${haendler}${filialen > 1 ? ` · ${filialen} Filialen` : ''} · bis ${bis}`,
-        listenMehrere: (n, preis, bis) => `${n} Angebote · ab ${preis} · bis ${bis}`,
+        /* Die Filiale steht immer dabei – „ALDI Nord" allein sagt nicht,
+           in welchen Laden man gehen soll. */
+        listenTreffer: (preis, filiale, bis) => `Angebot · ${preis} · ${filiale} · bis ${bis}`,
+        listenAlternative: (preis, filiale, bis) => `Alternative · ${preis} · ${filiale} · bis ${bis}`,
+        listenMehrere: (n, preis, filiale, bis) => `${n} Angebote · ab ${preis} bei ${filiale} · bis ${bis}`,
         keineMaerkte: 'Lege zuerst mindestens einen Markt unter „Meine Märkte“ an.',
 
         hilfeTitel: 'Wochenangebote mit KI einrichten',

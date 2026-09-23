@@ -856,7 +856,18 @@ body:not(.modus-experte) .experte-nur { display: none !important; }
     color: #78350f;
 }
 .angebote-details { margin-top: 10px; }
+/* Was der Assistent nicht lesen konnte: sichtbar, aber zurückhaltend – es ist
+   eine Auskunft über den Lauf, keine Warnung an den Menschen. */
+.angebote-nichtgelesen { margin-top: 6px; }
+.angebote-nichtgelesen ul {
+    margin: 0 0 4px;
+    padding-left: 20px;
+    color: var(--color-text-muted);
+    font-size: 0.85rem;
+}
+.angebote-nichtgelesen li { margin: 3px 0; }
 .angebote-details > summary,
+.angebote-nichtgelesen > summary,
 .angebot-filialen > summary {
     min-height: 44px;
     display: flex;
@@ -865,6 +876,7 @@ body:not(.modus-experte) .experte-nur { display: none !important; }
     font-weight: 700;
     cursor: pointer;
 }
+.angebote-nichtgelesen > summary { color: var(--color-text-muted); font-weight: 600; }
 .angebot-filialen ul {
     margin: 0 0 4px;
     padding-left: 20px;
