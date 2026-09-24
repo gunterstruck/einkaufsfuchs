@@ -17,37 +17,54 @@ export const ANGEBOTSERGEBNIS_VERSION = 2;
 /**
  * Die acht Händler – und was man über ihre Angebotsseiten **gemessen** weiß.
  *
- * Erhoben im September 2026 mit einem echten Browser (nicht nur einem
- * Seitenabruf), je Seite vier Sekunden Nachladezeit:
+ * Zweite Messung am 23.09.2026, mit einem echten Browser und so, wie ein
+ * Mensch die Seite benutzt: Cookie-Hinweis bestätigen, bis zum Ende
+ * scrollen, Produktseiten öffnen. Die erste Messung (nur laden, vier
+ * Sekunden warten) war zu streng – sie sah bei ALDI Nord keinen einzigen
+ * Preis, wo nach dem Cookie-Hinweis über 600 im Text stehen. Die Tabelle
+ * steht in KONZEPT 6.7.
  *
- * - ALDI Nord, Lidl, Kaufland: Seite lädt, aber **kein Angebotspreis im
- *   Seitentext** (bei Lidl ein einzelner Versandpreis). Die Preise stehen im
- *   Prospekt-Betrachter oder hinter einer Filialwahl.
- * - PENNY: Seite lädt und **verlangt ausdrücklich eine Marktwahl**.
- * - ALDI Süd, REWE, EDEKA, Netto: **abgewiesen (HTTP 403)**, auch mit echtem
- *   Browser. Das kann an der Rechenzentrums-Adresse der Messung liegen; ein
- *   Assistent mit anderem Netzzugang kommt womöglich weiter.
+ * `hinweis` geht wörtlich in den Rechercheauftrag, aber nur für Händler,
+ * die im Profil vorkommen. Er sagt, wo auf *dieser* Seite Preis und
+ * Gültigkeit stehen – das ist bei jedem Händler anders.
  *
- * Die Folgerung steht im Auftrag: Keine der acht Seiten gibt Preise beim
- * bloßen Aufruf her. Ein Assistent braucht ein Werkzeug, das Seiten
- * darstellt und den Prospekt öffnet – und bei marktgebundenen Händlern die
- * Seite der konkreten Filiale.
- *
- * `marktgebunden`: Preise gelten nur für eine gewählte Filiale. Gemessen bei
- * PENNY; bei Kaufland und Netto steht es schon in der Adresse
- * („filiale.", „filialangebote"); bei REWE und EDEKA ist das Angebot
- * regional je Markt – beide haben die Messung abgewiesen, die Einordnung
- * stammt dort aus dem Aufbau ihrer Seiten, nicht aus einem Blick hinein.
+ * `marktgebunden`: Die Seite zeigt Angebote für eine gewählte Filiale oder
+ * verlangt eine. ALDI Süd wählt selbst eine nach Standort („Ist Mülheim an
+ * der Ruhr deine Filiale?") – falsch für jeden, der woanders wohnt.
  */
 export const HAENDLER = Object.freeze([
-    { name: 'ALDI Nord', url: 'https://www.aldi-nord.de/angebote.html', host: 'aldi-nord.de', marktgebunden: false },
-    { name: 'ALDI Süd', url: 'https://www.aldi-sued.de/angebote', host: 'aldi-sued.de', marktgebunden: false },
-    { name: 'Lidl', url: 'https://www.lidl.de/c/online-prospekte/s10005610/', host: 'lidl.de', marktgebunden: false },
-    { name: 'REWE', url: 'https://www.rewe.de/angebote/', host: 'rewe.de', marktgebunden: true },
-    { name: 'EDEKA', url: 'https://www.edeka.de/angebote/', host: 'edeka.de', marktgebunden: true },
-    { name: 'Kaufland', url: 'https://filiale.kaufland.de/angebote/uebersicht.html', host: 'kaufland.de', marktgebunden: true },
-    { name: 'Netto Marken-Discount', url: 'https://www.netto-online.de/filialangebote', host: 'netto-online.de', marktgebunden: true },
-    { name: 'PENNY', url: 'https://www.penny.de/angebote/', host: 'penny.de', marktgebunden: true }
+    {
+        name: 'ALDI Nord', url: 'https://www.aldi-nord.de/angebote.html', host: 'aldi-nord.de', marktgebunden: false,
+        hinweis: 'Nach dem Cookie-Hinweis und Herunterscrollen stehen Produkte mit Preis und Grundpreis im Seitentext. Die Übersicht nennt nur den Aktionsbeginn („Aktion Mo. 21.9.“); die Gültigkeit steht auf der Produktseite („21.09 - 26.09“). Nimm die Produktseite als quelle.'
+    },
+    {
+        name: 'ALDI Süd', url: 'https://www.aldi-sued.de/angebote', host: 'aldi-sued.de', marktgebunden: true,
+        hinweis: 'Die Seite nennt den Zeitraum („Wochenangebote Mo., 21.9. – Sa., 26.9.“) und zeigt Preis und Grundpreis im Text. Sie wählt selbst eine Filiale nach Standort – stelle über „Filiale ändern“ die Filiale aus dem Profil ein.'
+    },
+    {
+        name: 'Lidl', url: 'https://www.lidl.de/c/online-prospekte/s10005610/', host: 'lidl.de', marktgebunden: false,
+        hinweis: 'Die Filial-Angebote stehen im „Aktionsprospekt“ der Woche (Titel mit Zeitraum, z. B. „21.09.2026 – 26.09.2026“). Der Prospekt besteht aus Seitenbildern ohne Text – lies die Seiten als Bild. Die Lidl-Suche zeigt den Onlineshop, nicht die Filial-Angebote.'
+    },
+    {
+        name: 'REWE', url: 'https://www.rewe.de/angebote/', host: 'rewe.de', marktgebunden: true,
+        hinweis: 'Bei der Prüfung stand vor der Seite eine Sicherheitsabfrage (HTTP 403). Kommt sie bei dir auch, nicht umgehen – dann in nichtGelesen.'
+    },
+    {
+        name: 'EDEKA', url: 'https://www.edeka.de/angebote/', host: 'edeka.de', marktgebunden: true,
+        hinweis: 'Ohne gewählten Markt zeigt die Seite nur wenige bundesweite Angebote. Über „Wähle deinen Markt“ die Filiale aus dem Profil einstellen. Der Zeitraum steht auf der Seite („Gültig vom … bis zum …“).'
+    },
+    {
+        name: 'Kaufland', url: 'https://filiale.kaufland.de/angebote/uebersicht.html', host: 'kaufland.de', marktgebunden: true,
+        hinweis: 'Preise und Zeitraum stehen im Seitentext („Gültig vom 17.09. bis 23.09.“); die Angebotswoche läuft Donnerstag bis Mittwoch. Filiale aus dem Profil wählen.'
+    },
+    {
+        name: 'Netto Marken-Discount', url: 'https://www.netto-online.de/filialangebote', host: 'netto-online.de', marktgebunden: true,
+        hinweis: 'Ohne gewählte Filiale zeigt die Seite keine Preise („wähle bitte einen Markt“). Über „Filiale auswählen“ die Filiale aus dem Profil einstellen.'
+    },
+    {
+        name: 'PENNY', url: 'https://www.penny.de/angebote/', host: 'penny.de', marktgebunden: true,
+        hinweis: 'Die Angebote stehen mit Preis als Liste im Text („Als Liste“). Über „Markt wählen“ die Filiale aus dem Profil einstellen.'
+    }
 ]);
 
 function istBekannterHaendler(haendler) {
@@ -319,20 +336,24 @@ export function alsAngebotsauftrag(profil = demoAngebotsprofil()) {
 
     const preiswege = [
         'So kommst du an die Preise:',
-        '- Die Angebotsseiten zeigen die Preise nicht im Seitentext. Sie werden nachgeladen oder stehen im Online-Prospekt. Ein reiner Textabruf findet deshalb nichts: Öffne die Seiten mit einem Werkzeug, das sie wie ein Browser darstellt, und dort den Prospekt oder die Angebotsübersicht.'
+        '- Die meisten Angebotsseiten laden ihre Preise erst nach. Öffne sie mit einem Werkzeug, das sie wie ein Browser darstellt, bestätige oder schließe den Cookie-Hinweis und scrolle bis zum Ende. Ein reiner Textabruf findet oft nichts.'
     ];
     if (gebunden.length) {
-        preiswege.push(`- Preise je Filiale gelten bei ${namen(gebunden)}. Nimm die angebotsseite der Filiale aus dem Eingabeprofil. Verlangt die Seite eine Marktwahl, wähle über die öffentliche Marktsuche genau die Filiale aus dem Feld markt.`);
+        preiswege.push(`- Filiale wählen bei ${namen(gebunden)}: Nimm die angebotsseite der Filiale aus dem Eingabeprofil. Fragt die Seite nach dem Markt oder hat sie selbst einen gewählt, stelle über die öffentliche Marktsuche genau die Filiale aus dem Feld markt ein.`);
     }
     if (einheitlich.length) {
         preiswege.push(`- ${namen(einheitlich)}: Die Wochenangebote gelten in der Regel für alle Filialen. Trage jedes Angebot trotzdem für jede Filiale dieses Händlers aus dem Eingabeprofil ein, sofern die Seite nichts Abweichendes sagt.`);
+    }
+    for (const eintrag of HAENDLER.filter((h) => imProfil.has(h.name))) {
+        preiswege.push(`- ${eintrag.name}: ${eintrag.hinweis}`);
     }
     if (mitSonstigem) {
         preiswege.push('- Sonstige Läden: nur die im Eingabeprofil hinterlegte angebotsseite.');
     }
     preiswege.push(
-        '- Die Gültigkeit (gueltigVon, gueltigBis) steht auf der Seite oder im Prospekt. Übernimm sie von dort, leite sie nicht aus dem Wochentag ab.',
-        '- Kommst du an eine Filiale nicht heran – Seite abgewiesen, Marktwahl nicht möglich, Prospekt nicht lesbar –, rate nicht. Trage sie in nichtGelesen ein und mach mit der nächsten weiter.'
+        '- Preise nur mit App, Kundenkarte oder Coupon („App Preis“, „Nur mit App“, „Mit Kaufland Card“, Lidl Plus) nicht als preis übernehmen. Nimm den Angebotspreis, der ohne App und Karte gilt; den App-Preis darfst du im hinweis nennen.',
+        '- Die Gültigkeit (gueltigVon, gueltigBis) steht auf der Seite, im Prospekt oder auf der Produktseite. Nennt der Händler nur einen Beginn („Im Angebot ab 24.09“), setze gueltigBis auf den Samstag derselben Woche und schreibe in hinweis „Kein Enddatum angegeben – solange Vorrat reicht“. Sonst nicht raten.',
+        '- Kommst du an eine Filiale nicht heran – Seite abgewiesen, Sicherheitsabfrage, Marktwahl nicht möglich, Prospekt nicht lesbar –, rate nicht. Trage sie in nichtGelesen ein und mach mit der nächsten weiter.'
     );
 
     return [
@@ -618,6 +639,11 @@ function markiereNiedrigsteGrundpreise(gruppen) {
     for (const kandidaten of vergleich.values()) {
         if (kandidaten.length < 2) continue;
         const niedrigster = Math.min(...kandidaten.map((kandidat) => kandidat.wert));
+        /* Sind alle gleich teuer, ist keiner „der niedrigste" – die Marke
+           stünde sonst an jedem Treffer und sagte nichts. So geschehen bei
+           zwei Milchsorten zu je 1,11 €/l. Gleichstand *unten* bei einem
+           teureren Dritten bleibt markiert: Dann stimmt die Aussage. */
+        if (kandidaten.every((kandidat) => kandidat.wert === niedrigster)) continue;
         for (const kandidat of kandidaten) {
             if (kandidat.wert === niedrigster) kandidat.gruppe.niedrigsterGefundenerGrundpreis = true;
         }
