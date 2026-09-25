@@ -73,6 +73,26 @@ Projekt drei echte Fehler gefunden, die kein Nachdenken gefunden hätte – sie
 fährt einen echten Browser, misst die Zwischenablage, zählt jede
 Netzwerkanfrage und lässt bei jedem Konsolenfehler durchfallen.
 
+## Nie direkt auf `main` – immer Branch und Pull Request
+
+`main` ist die Live-Version: Vercel veröffentlicht jeden Commit sofort auf
+foxi-psi.vercel.app. Ein Push auf `main` ist deshalb kein Speichern, sondern
+eine Auslieferung an alle. Jede Änderung geht über einen eigenen Branch und
+einen Pull Request – auch die kleine, auch die eilige, auch die eigene.
+
+```bash
+git switch -c thema/kurzer-name
+# ändern, testen
+git push -u origin thema/kurzer-name
+```
+
+Den Pull Request eröffnet ein Mensch auf GitHub; **`gh` ist hier nicht
+installiert**, also keinen `gh pr create`-Befehl vorschlagen. Nach dem Push
+den Branchnamen nennen und den Link zum Aufmachen mitgeben.
+
+Wo `git` nicht im Pfad liegt:
+`C:\Users\de7b0ct0\AppData\Local\Programs\Git\cmd`.
+
 ## Häufige Stolpersteine
 
 - **Nicht auf das Bild warten, sondern auf den Zustand.** Kacheln färben sich
