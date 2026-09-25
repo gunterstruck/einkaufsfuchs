@@ -17,7 +17,7 @@ import {
     angebotseinfuehrungErledigt, maerkte, marktSpeichern, marktAktivSetzen, marktLoeschen
 } from '../zustand.js';
 import { melde, zeigeBereich } from './schale.js';
-import { zeigeDialog, dialogFeld, schliesseDialog } from './dialog.js';
+import { zeigeDialog, dialogFeld, dialogZeile, schliesseDialog } from './dialog.js';
 import {
     vollsicherungExportieren, vollsicherungEinlesen, teileAlsDatei, kopiereListeAlsText, kopiereStammartikel, dateiEinlesen,
     zeigeQrCode, linkEinlesen
@@ -85,6 +85,23 @@ function knopf(text, wirkung, { betont = false, gefahr = false } = {}) {
     if (gefahr) el.className = 'danger';
     el.addEventListener('click', wirkung);
     return el;
+}
+
+/**
+ * Rückfrage vor einer Handlung, die nichts zurückholt.
+ *
+ * Bewusst der eigene Dialog und nicht `confirm()`: Der Systemdialog trägt in
+ * der installierten App die Adresse der Seite in der Überschrift, lässt sich
+ * nicht gestalten, und einige Browser unterdrücken ihn ganz – dann liefe
+ * ausgerechnet „Foxi zurücksetzen“ ohne Rückfrage durch. `zeigeDialog` setzt
+ * den Abbrechen-Knopf von selbst daneben.
+ */
+function frage(titel, text, wirkung) {
+    zeigeDialog({
+        titel,
+        koerper: [dialogZeile(text)],
+        knoepfe: [{ text: titel, wirkung }]
+    });
 }
 
 /* ────────────────────────────────────────────────────────────────────────
@@ -679,19 +696,20 @@ function statistikKarte() {
 function datenKarte() {
     const abschnitt = karte(t('mehr.datenTitel'));
     abschnitt.append(knopfleiste(
-        knopf(t('mehr.listeLeeren'), async () => {
-            if (!confirm(t('mehr.listeLeerenFrage'))) return;
-            await listeLeeren();
-            melde(t('mehr.listeGeleert'));
+        knopf(t('mehr.listeLeeren'), () => {
+            frage(t('mehr.listeLeeren'), t('mehr.listeLeerenFrage'), async () => {
+                await listeLeeren();
+                melde(t('mehr.listeGeleert'));
+            });
         }),
         /* Der harte Knopf steht bewusst auch im Basismodus: Er ist der Weg
            zurück, wenn jemand die App weitergibt – und der Beweis dafür,
            dass alles auf diesem Gerät liegt. */
-        knopf(t('mehr.allesZuruecksetzen'), async () => {
-            if (!confirm(t('mehr.allesZuruecksetzenFrage'))) return;
-            schliesseDialog();
-            await allesZuruecksetzen();
-            location.reload();
+        knopf(t('mehr.allesZuruecksetzen'), () => {
+            frage(t('mehr.allesZuruecksetzen'), t('mehr.allesZuruecksetzenFrage'), async () => {
+                await allesZuruecksetzen();
+                location.reload();
+            });
         }, { gefahr: true })
     ));
     return abschnitt;

@@ -446,9 +446,19 @@ export async function importAnwenden(fremdeArtikel, modus = 'nurNeue') {
             .join(' · ');
         /* Bei „Alles übernehmen“ gewinnt auch ein bewusst leerer Wert aus
            der Datei. Andernfalls würde der lokale Produktwunsch die gewählte
-           Importentscheidung unmittelbar wieder überschreiben. */
+           Importentscheidung unmittelbar wieder überschreiben.
+
+           Bei „Nur neue“ bleibt der gelernte Wunsch dieses Haushalts stehen –
+           auch dann, wenn der Artikel gerade nicht auf der Liste steht. Er ist
+           nicht an die Liste gebunden: Er entsteht beim Abhaken, steht im
+           Artikelblatt und setzt die Vorgabe für jedes künftige Aufnehmen.
+           Eine einmal geteilte fremde Liste darf ihn nicht dauerhaft
+           ersetzen. Ein Artikel, der noch gar keinen Wunsch hat, nimmt den
+           aus der Datei an – das überschreibt nichts, sondern ist der erste
+           Eintrag. */
         const bisherigerWunsch = artikel?.standardWunsch || '';
-        if (artikel && (modus === 'alles' || wunsch) && bisherigerWunsch !== wunsch) {
+        const wunschUebernehmen = modus === 'alles' || (!bisherigerWunsch && Boolean(wunsch));
+        if (artikel && wunschUebernehmen && bisherigerWunsch !== wunsch) {
             artikel.standardWunsch = wunsch.slice(0, 180);
             if (!neueArtikel.includes(artikel)) neueArtikel.push(artikel);
         }

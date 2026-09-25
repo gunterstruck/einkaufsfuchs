@@ -9,7 +9,7 @@
  * So bleiben Eingaben und die laufende App-Schale bei einem Update erhalten.
  */
 
-const CACHE = 'einkaufsfuchs-v0.15.0';
+const CACHE = 'einkaufsfuchs-v0.15.1';
 
 const SCHALE = [
     './',
@@ -41,13 +41,13 @@ const SCHALE = [
     'src/ui/artikelblatt.js',
     'src/daten/katalog.json',
     'src/daten/rezepte.json',
-    'favicon.ico?v=0.15.0',
-    'icons/foxi.svg?v=0.15.0',
-    'icons/favicon-64.png?v=0.15.0',
-    'icons/icon-192.png?v=0.15.0',
-    'icons/icon-512.png?v=0.15.0',
-    'icons/maskable-512.png?v=0.15.0',
-    'icons/apple-touch-icon.png?v=0.15.0'
+    'favicon.ico?v=0.15.1',
+    'icons/foxi.svg?v=0.15.1',
+    'icons/favicon-64.png?v=0.15.1',
+    'icons/icon-192.png?v=0.15.1',
+    'icons/icon-512.png?v=0.15.1',
+    'icons/maskable-512.png?v=0.15.1',
+    'icons/apple-touch-icon.png?v=0.15.1'
 ];
 
 self.addEventListener('install', (ereignis) => {
@@ -82,33 +82,58 @@ self.addEventListener('fetch', (ereignis) => {
        zwischengespeichert werden. */
     if (adresse.origin !== self.location.origin) return;
 
-    /* Seiten und Module bleiben bis zur sicheren Aktivierung auf demselben Stand. */
     if (anfrage.mode === 'navigate') {
-        ereignis.respondWith(
-            caches.open(CACHE).then(cache => cache.match('index.html')).then(treffer => treffer || fetch(anfrage))
-                .then((antwort) => {
-                    if (antwort && antwort.ok) {
-                        const kopie = antwort.clone();
-                        caches.open(CACHE).then((speicher) => speicher.put('index.html', kopie));
-                    }
-                    if (!antwort || !antwort.ok) return caches.open(CACHE).then(cache => cache.match('index.html'));
-                    return antwort;
-                })
-                .catch(() => caches.open(CACHE).then(cache => cache.match('index.html')))
-        );
+        ereignis.respondWith(schaleAusliefern(ereignis));
         return;
     }
+    ereignis.respondWith(ausSpeicherOderNetz(ereignis));
+});
 
-    ereignis.respondWith(
-        caches.open(CACHE).then(cache => cache.match(anfrage)).then((treffer) => {
-            if (treffer) return treffer;
-            return fetch(anfrage).then((antwort) => {
-                if (antwort && antwort.ok && antwort.type === 'basic') {
-                    const kopie = antwort.clone();
-                    caches.open(CACHE).then((speicher) => speicher.put(anfrage, kopie));
-                }
-                return antwort;
-            });
+/**
+ * Seiten und Module bleiben bis zur sicheren Aktivierung auf demselben Stand:
+ * Solange die Schale im Zwischenspeicher liegt, wird sie ausgeliefert und
+ * nichts gefragt. Nur wenn sie fehlt – etwa weil ein Install abgebrochen
+ * wurde –, geht eine Anfrage hinaus.
+ */
+async function schaleAusliefern(ereignis) {
+    const anfrage = ereignis.request;
+    const cache = await caches.open(CACHE);
+    const treffer = await cache.match('index.html');
+    if (treffer) return treffer;
+
+    /* Was jetzt ankommt, wird zur neuen Schale. Was mit einem Fehlercode
+       ankommt, geht unverändert durch: Die Antwort des Servers ist für den
+       Menschen davor brauchbarer als ein Netzwerkfehler aus dem Nichts. */
+    const antwort = await fetch(anfrage);
+    if (antwort && antwort.ok) sichere(ereignis, cache, 'index.html', antwort.clone());
+    return antwort;
+}
+
+async function ausSpeicherOderNetz(ereignis) {
+    const anfrage = ereignis.request;
+    const cache = await caches.open(CACHE);
+    const treffer = await cache.match(anfrage);
+    if (treffer) return treffer;
+
+    const antwort = await fetch(anfrage);
+    if (antwort && antwort.ok && antwort.type === 'basic') {
+        sichere(ereignis, cache, anfrage, antwort.clone());
+    }
+    return antwort;
+}
+
+/**
+ * Zwischenspeichern, ohne die Auslieferung daran zu hängen.
+ *
+ * `waitUntil` hält den Service Worker so lange am Leben, dass das Schreiben
+ * auch dann fertig wird, wenn die Antwort längst beim Fenster ist. Und ein
+ * voller Speicher ist kein Grund, eine Seite scheitern zu lassen – sonst
+ * bringt ausgerechnet das volle Gerät die App zum Stehen.
+ */
+function sichere(ereignis, cache, schluessel, antwort) {
+    ereignis.waitUntil(
+        cache.put(schluessel, antwort).catch((fehler) => {
+            console.debug('[Foxi] nicht zwischengespeichert', fehler);
         })
     );
-});
+}

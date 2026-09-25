@@ -90,6 +90,39 @@ describe('Listenimport', () => {
         );
     });
 
+    /* Der Produktwunsch hängt nicht an der Liste: Er entsteht beim Abhaken,
+       steht im Artikelblatt und setzt die Vorgabe für jedes künftige
+       Aufnehmen. Eine fremde Liste, in der der Artikel gerade nicht steht,
+       hat ihn trotzdem einmal überschrieben – „nur neue" verspricht das
+       Gegenteil. */
+    it('lässt bei nurNeue den Produktwunsch auch dann stehen, wenn der Artikel nicht auf der Liste ist', async () => {
+        zustand.liste = new Map();
+
+        const anzahl = await importAnwenden([{
+            id: 'milch', name: 'Milch', kategorieId: 'molkerei', icon: '🥛',
+            menge: '1 Liter fettarm', notiz: ''
+        }], 'nurNeue');
+
+        expect(anzahl).toBe(1);
+        expect(zustand.artikel.get('milch').standardWunsch).toBe('6 Liter');
+        expect(zustand.liste.get('milch').menge).toBe('6 Liter');
+    });
+
+    /* Die Gegenprobe: Ohne eigenen Wunsch wird der aus der Datei übernommen.
+       Das überschreibt nichts – es ist der erste Eintrag. */
+    it('übernimmt bei nurNeue den Wunsch aus der Datei, wenn der Artikel noch keinen hat', async () => {
+        zustand.liste = new Map();
+        delete zustand.artikel.get('milch').standardWunsch;
+
+        await importAnwenden([{
+            id: 'milch', name: 'Milch', kategorieId: 'molkerei', icon: '🥛',
+            menge: '1 Liter fettarm', notiz: ''
+        }], 'nurNeue');
+
+        expect(zustand.artikel.get('milch').standardWunsch).toBe('1 Liter fettarm');
+        expect(zustand.liste.get('milch').menge).toBe('1 Liter fettarm');
+    });
+
     it('behandelt reine Leerzeichen in Menge und Notiz als leeren Wunsch', async () => {
         const anzahl = await importAnwenden([{
             id: 'milch', name: 'Milch', kategorieId: 'molkerei', icon: '🥛',

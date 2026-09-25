@@ -4,7 +4,7 @@
 ![Kein Konto](https://img.shields.io/badge/Kein%20Konto-kein%20Login%2C%20kein%20Backend-0f766e)
 ![PWA](https://img.shields.io/badge/PWA-offlinef%C3%A4hig-purple)
 ![MIT License](https://img.shields.io/badge/License-MIT-yellow)
-![Version](https://img.shields.io/badge/Version-0.15.0-orange)
+![Version](https://img.shields.io/badge/Version-0.15.1-orange)
 
 **Tippen statt Tippen.**
 
@@ -259,7 +259,7 @@ der Adresse erreichbar. Das ist kein Leck – dieselben Dateien liegen ohnehin
 ### Prüfen
 
 ```bash
-npm install && npm test          # 237 Unit-Tests (Logik, Daten, Import, PWA und Designsystem)
+npm install && npm test          # 239 Unit-Tests (Logik, Daten, Import, PWA und Designsystem)
 
 npm i --no-save playwright && npx playwright install chromium
 node tools/durchlauf.mjs         # 105 Prüfungen im echten Browser + Bilder
@@ -388,6 +388,12 @@ in den normalen Listenexport aufgenommen.
 ---
 
 
+## Neu in 0.15.1
+
+- **„Nur neue“ lässt den Produktwunsch jetzt wirklich stehen.** Wer eine geteilte Liste mit „Nur neue“ übernahm, dem überschrieb sie stillschweigend den gelernten Produktwunsch – aber nur bei Artikeln, die gerade nicht auf der eigenen Liste standen. Aus „Vollmilch 3,5 %“ wurde dauerhaft das, was auf der fremden Liste stand, und zwar für jedes künftige Aufnehmen. Der Wunsch bleibt jetzt; nur „Alles übernehmen“ ersetzt ihn. Ein Artikel ohne eigenen Wunsch nimmt den aus der Datei weiterhin an.
+- **„Liste leeren“ und „Foxi zurücksetzen“ fragen im eigenen Dialog** statt im Systemfenster des Browsers. Das alte Fenster trug in der installierten App die Adresse der Seite in der Überschrift – und manche Browser unterdrücken es ganz, dann lief ausgerechnet das Zurücksetzen ohne Rückfrage durch.
+- **Unter der Haube:** Der Service Worker schrieb bei jedem Start die Schale ohne Grund in den Zwischenspeicher zurück; ein voller Speicher konnte dabei unbemerkt einen Fehler hinterlassen. Und die Datenbank öffnet nicht mehr mehrfach parallel und erholt sich, wenn der Browser die Verbindung von sich aus schließt.
+
 ## Neu in 0.15.0
 
 - **Der KI-Auftrag kennt jeden Händler einzeln.** Die acht Angebotsseiten wurden am 23.09.2026 neu geprüft, diesmal wie ein Mensch sie benutzt: Cookie-Hinweis bestätigen, scrollen, Produktseiten öffnen. Ergebnis: ALDI Nord, ALDI Süd, Kaufland und PENNY zeigen Preise im Text, EDEKA, Netto und PENNY erst nach der Marktwahl vollständig, Lidl nur als Prospekt aus Seitenbildern, REWE stellte eine Sicherheitsabfrage. Der Auftrag enthält für jeden Händler aus dem Profil genau diesen Weg.
@@ -425,7 +431,7 @@ in den normalen Listenexport aufgenommen.
 
 ## Stand und was als Nächstes kommt
 
-**Gebaut (v0.15.0):** Version 1 ist inhaltlich vollständig – Basismodus,
+**Gebaut (v0.15.1):** Version 1 ist inhaltlich vollständig – Basismodus,
 lernender Katalog, Rezepte, Kategorie-Reihenfolge per Ziehen, Teilen als
 Datei mit Zusammenführung beim Import, Briefing-Export, Statistik,
 Offlinebetrieb, Installierbarkeit. Der geführte Angebotscheck verbindet Foxis

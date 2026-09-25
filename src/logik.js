@@ -341,7 +341,10 @@ export function kaufStatistik(artikel, anzahl = 20) {
 export function wiederkaufVorschlaege(artikel, liste, verschoben = {}, jetzt = Date.now()) {
     const median = werte => { const s = [...werte].sort((a,b) => a-b); return s[Math.floor(s.length / 2)]; };
     return artikel.flatMap(a => {
-        if (liste.get(a.id) && !liste.get(a.id).erledigt || (verschoben[a.id] || 0) > jetzt) return [];
+        const eintrag = liste.get(a.id);
+        /* Steht der Artikel offen auf der Liste, ist der Bedarf schon gedeckt;
+           wer ihn weggeschoben hat, will ihn bis dahin nicht sehen. */
+        if ((eintrag && !eintrag.erledigt) || (verschoben[a.id] || 0) > jetzt) return [];
         const tage = [...new Set((a.letzteKaeufe || []).filter(z => Number.isFinite(z) && z <= jetzt)
             .map(z => Math.floor(z / TAG_MS)))].sort((a,b) => a-b).slice(-8);
         if (tage.length < 3) return [];

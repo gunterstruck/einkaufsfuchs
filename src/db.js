@@ -29,10 +29,17 @@ export const SPEICHER = {
 };
 
 let verbindung = null;
+let verbindungLaeuft = null;
 
 export function oeffne() {
     if (verbindung) return Promise.resolve(verbindung);
-    return new Promise((erfuellen, ablehnen) => {
+    /* Mehrere gleichzeitige Erstaufrufe teilen sich eine Anfrage. Ohne das
+       öffnete jeder seine eigene Verbindung; alle bis auf die zuletzt
+       zugewiesene blieben offen, ohne dass sie noch jemand schließen könnte –
+       und eine offene Verbindung blockiert jedes spätere Upgrade und das
+       Löschen der Datenbank. */
+    if (verbindungLaeuft) return verbindungLaeuft;
+    const laufend = new Promise((erfuellen, ablehnen) => {
         const anfrage = indexedDB.open(DB_NAME, DB_VERSION);
         anfrage.onupgradeneeded = () => {
             const db = anfrage.result;
@@ -60,11 +67,24 @@ export function oeffne() {
             /* Ein zweiter Tab, der eine neuere Fassung öffnen will, hängt sonst
                ewig an dieser Verbindung fest. */
             verbindung.onversionchange = () => { verbindung.close(); verbindung = null; };
+            /* Schließt der Browser die Verbindung von sich aus – Speicherdruck
+               oder „Websitedaten löschen“ in einem anderen Tab –, muss der
+               nächste Zugriff neu öffnen. Ohne das bliebe hier ein toter Griff
+               stehen, an dem jedes weitere Schreiben scheitert, bis jemand die
+               Seite neu lädt. */
+            verbindung.onclose = () => { verbindung = null; };
             erfuellen(verbindung);
         };
         anfrage.onerror = () => ablehnen(anfrage.error);
         anfrage.onblocked = () => ablehnen(new Error('Datenbank durch ein anderes Fenster blockiert'));
     });
+    /* Der Platzhalter gilt nur, solange geöffnet wird – danach übernimmt
+       wieder `verbindung`, und ein Fehlschlag darf den nächsten Versuch nicht
+       blockieren. */
+    const aufraeumen = () => { if (verbindungLaeuft === laufend) verbindungLaeuft = null; };
+    laufend.then(aufraeumen, aufraeumen);
+    verbindungLaeuft = laufend;
+    return laufend;
 }
 
 async function transaktion(speicher, modus, arbeit) {
@@ -132,6 +152,7 @@ export function leere(speicher) {
 /** Nur für „Foxi zurücksetzen". Löscht die Datenbank vollständig. */
 export function loescheDatenbank() {
     if (verbindung) { verbindung.close(); verbindung = null; }
+    verbindungLaeuft = null;
     return new Promise((erfuellen, ablehnen) => {
         const anfrage = indexedDB.deleteDatabase(DB_NAME);
         anfrage.onsuccess = () => erfuellen();
